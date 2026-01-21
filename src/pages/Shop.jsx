@@ -249,7 +249,7 @@ export default function Shop() {
             <button className="btn" style={{ background: '#95a5a6' }} onClick={changeNickname}>🏷️ 닉변 (10억)</button>
             <button className="btn" style={{ background: '#e67e22' }} onClick={() => randomDemote(100000000, 1, true)}>📉 랜덤유저 1단계 강등 (1억)</button>
             <button className="btn" style={{ background: '#d35400' }} onClick={() => randomDemote(1000000000, 2, true)}>📉 랜덤유저 2단계 강등 (10억)</button>
-            <button className="btn" style={{ background: '#c0392b' }} onClick={() => randomDemote(5000000000, 2, false)}>💣 랜덤유저 2 (50억)<br/><span style={{fontSize:'10px'}}>(나 제외)</span></button>
+            <button className="btn" style={{ background: '#c0392b' }} onClick={() => randomDemote(5000000000, 2, false)}>💣 랜덤유저 2단계 강등 (50억)<br/><span style={{fontSize:'10px'}}>(나 제외)</span></button>
             
             {/* 저격 버튼 (타겟 선택되어야 활성화) */}
             <button 

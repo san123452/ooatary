@@ -17,9 +17,11 @@ export default function Admin() {
     const [selectedUser, setSelectedUser] = useState(null);
     const [userHistory, setUserHistory] = useState([]);
     const [isServerOpen, setIsServerOpen] = useState(true);
-    const [features, setFeatures] = useState({ transfer: true, attack: true });
     
-    // 🔄 로딩 상태 (경제 개혁 등 대규모 작업용)
+    // ⚙️ [수정됨] 기능 활성화 상태 (shop 추가)
+    const [features, setFeatures] = useState({ transfer: true, attack: true, shop: true });
+    
+    // 🔄 로딩 상태
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
@@ -28,7 +30,6 @@ export default function Admin() {
         if (tab === 'server') fetchServerStatus();
         if (tab === 'features') fetchFeatures();
         
-        // 내역 탭일 때 유저 정보도 같이 가져와야 닉네임 매칭 가능
         if (tab === 'history') {
             fetchHistory();
             fetchUsers(); 
@@ -50,7 +51,6 @@ export default function Admin() {
         const q = query(collection(db, "users"));
         const snap = await getDocs(q);
         const list = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-        // 정렬: 승인대기 -> 가입일순
         list.sort((a, b) => {
             if (a.isApproved !== b.isApproved) return a.isApproved ? 1 : -1; 
             return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
@@ -70,57 +70,85 @@ export default function Admin() {
     const fetchHistory = async () => { const q = query(collection(db, "history"), orderBy("createdAt", "desc"), limit(50)); const snap = await getDocs(q); setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() }))); };
     const formatDate = (ts) => { if(!ts) return '-'; const date = ts.toDate(); return `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${date.getMinutes()}`; };
 
-    // --- 5. 기능 관리 함수 ---
-    const fetchFeatures = async () => { try { const docSnap = await getDoc(doc(db, "system", "features")); if (docSnap.exists()) { setFeatures(docSnap.data()); } else { const def = { transfer: true, attack: true }; await setDoc(doc(db, "system", "features"), def); setFeatures(def); } } catch (e) {} };
-    const toggleFeature = async (key) => { const newValue = !features[key]; const newFeatures = { ...features, [key]: newValue }; try { await setDoc(doc(db, "system", "features"), newFeatures, { merge: true }); setFeatures(newFeatures); alert("변경됨"); } catch (e) { alert("실패"); } };
+    // --- 5. 기능 관리 함수 (수정됨: shop 추가) ---
+    const fetchFeatures = async () => { 
+        try { 
+            const docSnap = await getDoc(doc(db, "system", "features")); 
+            if (docSnap.exists()) { 
+                // 기존 데이터에 shop이 없으면 true로 병합
+                const data = docSnap.data();
+                setFeatures({ transfer: true, attack: true, shop: true, ...data }); 
+            } else { 
+                const def = { transfer: true, attack: true, shop: true }; 
+                await setDoc(doc(db, "system", "features"), def); 
+                setFeatures(def); 
+            } 
+        } catch (e) {} 
+    };
+    const toggleFeature = async (key) => { 
+        const newValue = !features[key]; 
+        const newFeatures = { ...features, [key]: newValue }; 
+        try { 
+            await setDoc(doc(db, "system", "features"), newFeatures, { merge: true }); 
+            setFeatures(newFeatures); 
+            alert(`${key === 'transfer' ? '송금' : key === 'attack' ? '핵버튼' : '암시장'} 기능이 ${newValue ? '활성화' : '비활성화'} 되었습니다.`); 
+        } catch (e) { alert("실패"); } 
+    };
 
-    // --- 6. [복구됨] 경제 개혁 함수 ---
+    // --- 6. [업그레이드] 대규모 경제 개혁 함수 ---
+    const processBatchUpdate = async (docs, updateLogic) => {
+        const BATCH_SIZE = 450; 
+        let batch = writeBatch(db);
+        let count = 0;
+        for (const doc of docs) {
+            updateLogic(batch, doc);
+            count++;
+            if (count >= BATCH_SIZE) { await batch.commit(); batch = writeBatch(db); count = 0; }
+        }
+        if (count > 0) await batch.commit();
+    };
+
     const handleCurrencyReform = async (ratio) => {
-        if (!window.confirm(`🚨 정말로 모든 유저의 포인트를 ${ratio * 100}%로 만드시겠습니까?\n(예: 100만원 -> ${1000000 * ratio}원)`)) return;
+        if (!window.confirm(`🚨 [경고] 모든 유저의 자산이 ${ratio * 100}%로 줄어듭니다.\n정말 실행하시겠습니까?`)) return;
         setIsProcessing(true);
         try {
             const q = query(collection(db, "users"));
             const snap = await getDocs(q);
-            const batch = writeBatch(db); 
-            snap.docs.forEach((doc) => {
+            await processBatchUpdate(snap.docs, (batch, doc) => {
                 const currentPoint = doc.data().point || 0;
                 batch.update(doc.ref, { point: Math.floor(currentPoint * ratio) });
             });
-            await batch.commit();
-            alert("📉 화폐 개혁 완료.");
+            alert("📉 화폐 개혁이 완료되었습니다.");
         } catch (e) { alert("오류: " + e.message); } finally { setIsProcessing(false); }
     };
 
     const handleCapRich = async (limitAmount) => {
-        if (!window.confirm(`🚨 ${limitAmount.toLocaleString()}원 이상 가진 부자들의 돈을 압수하시겠습니까?`)) return;
+        if (!window.confirm(`🚨 ${limitAmount.toLocaleString()}원 이상 보유자의 재산을 강제로 압수하시겠습니까?`)) return;
         setIsProcessing(true);
         try {
             const q = query(collection(db, "users"));
             const snap = await getDocs(q);
-            const batch = writeBatch(db);
-            let count = 0;
-            snap.docs.forEach((doc) => {
+            let richCount = 0;
+            await processBatchUpdate(snap.docs, (batch, doc) => {
                 const currentPoint = doc.data().point || 0;
                 if (currentPoint > limitAmount) {
                     batch.update(doc.ref, { point: limitAmount });
-                    count++;
+                    richCount++;
                 }
             });
-            if (count > 0) { await batch.commit(); alert(`📉 ${count}명의 재산 압수 완료.`); } else { alert("대상자가 없습니다."); }
+            alert(`📉 ${richCount}명의 고액 자산가에게 세금을 징수했습니다.`);
         } catch (e) { alert("오류: " + e.message); } finally { setIsProcessing(false); }
     };
 
     const handleResetAll = async () => {
-        if (!window.confirm("🧨 정말로 모든 유저의 돈을 0원으로 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다!")) return;
-        const confirmStr = prompt("진행하려면 '초기화' 라고 입력하세요.");
+        if (!window.confirm("🧨 [위험] 모든 유저의 돈을 0원으로 만드시겠습니까?\n이 작업은 절대 되돌릴 수 없습니다!")) return;
+        const confirmStr = prompt("실행하려면 '초기화' 라고 입력하세요.");
         if (confirmStr !== "초기화") return;
         setIsProcessing(true);
         try {
             const q = query(collection(db, "users"));
             const snap = await getDocs(q);
-            const batch = writeBatch(db);
-            snap.docs.forEach((doc) => { batch.update(doc.ref, { point: 0 }); });
-            await batch.commit();
+            await processBatchUpdate(snap.docs, (batch, doc) => { batch.update(doc.ref, { point: 0 }); });
             alert("💣 시즌 초기화 완료.");
         } catch (e) { alert("오류: " + e.message); } finally { setIsProcessing(false); }
     };
@@ -129,7 +157,6 @@ export default function Admin() {
         <div className="container" style={{ paddingTop: 30, background: '#2c3e50', minHeight: '100vh', color: 'white', padding: 20 }}>
             <h1 style={{ color: '#e74c3c', textAlign: 'center', marginBottom: 20 }}>👮 통합 관리자 페이지</h1>
             
-            {/* 탭 버튼 (순서: 공지 -> 유저 -> 내역 -> 서버 -> 경제 -> 기능) */}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
                 <button className="btn" style={{ background: tab === 'notice' ? '#f1c40f' : '#7f8c8d', color: 'black' }} onClick={() => setTab('notice')}>📢 공지 관리</button>
                 <button className="btn" style={{ background: tab === 'users' ? '#f1c40f' : '#7f8c8d', color: 'black' }} onClick={() => setTab('users')}>👥 유저 관리</button>
@@ -140,7 +167,7 @@ export default function Admin() {
                 <button className="btn" style={{ background: '#34495e' }} onClick={() => navigate('/home')}>🏠 홈으로</button>
             </div>
 
-            {/* 📢 공지 관리 (1번) */}
+            {/* 📢 공지 관리 */}
             {tab === 'notice' && (
                 <div className="card" style={{ background: 'white', color: 'black', padding: 20 }}>
                     <h3>메인 공지 설정</h3>
@@ -178,7 +205,7 @@ export default function Admin() {
                 </div>
             )}
 
-            {/* 📜 내역 탭 (닉네임 표시됨) */}
+            {/* 📜 내역 탭 */}
             {tab === 'history' && (
                 <div style={{ background: '#34495e', padding: 20, borderRadius: 10 }}>
                     <h3>최근 거래 내역 (50건)</h3>
@@ -211,7 +238,7 @@ export default function Admin() {
                 </div>
             )}
 
-            {/* 🏦 경제 관리 (복구됨) */}
+            {/* 🏦 경제 관리 */}
             {tab === 'economy' && (
                 <div className="card" style={{ background: 'white', color: 'black', padding: 30, textAlign: 'center' }}>
                     <h2 style={{ marginBottom: 20, color: '#27ae60' }}>🏦 긴급 경제 대책</h2>
@@ -223,7 +250,7 @@ export default function Admin() {
                 </div>
             )}
 
-            {/* ⚙️ 기능 관리 */}
+            {/* ⚙️ 기능 관리 (암시장 추가됨) */}
             {tab === 'features' && (
                 <div className="card" style={{ background: 'white', color: 'black', padding: 30, textAlign: 'center' }}>
                     <h2 style={{ marginBottom: 30, color:'#9b59b6' }}>⚙️ 인게임 기능 ON/OFF</h2>
@@ -235,6 +262,10 @@ export default function Admin() {
                         <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '10px', width: '200px' }}>
                             <h3>🚀 핵공격 기능</h3>
                             <button onClick={() => toggleFeature('attack')} style={{ padding: '10px 20px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', background: features.attack ? '#8e44ad' : '#95a5a6', color: 'white' }}> {features.attack ? "✅ 활성화됨" : "🔒 잠김"} </button>
+                        </div>
+                        <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '10px', width: '200px' }}>
+                            <h3>😈 암시장 기능</h3>
+                            <button onClick={() => toggleFeature('shop')} style={{ padding: '10px 20px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', background: features.shop ? '#e67e22' : '#95a5a6', color: 'white' }}> {features.shop ? "✅ 활성화됨" : "🔒 잠김"} </button>
                         </div>
                     </div>
                 </div>
