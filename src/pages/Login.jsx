@@ -1,74 +1,219 @@
+
+// import React, { useState } from 'react';
+// import { auth, db } from '../firebase';
+// import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+// import { doc, getDoc } from 'firebase/firestore';
+// import { useNavigate } from 'react-router-dom';
+// import { useLanguage } from '../LanguageContext';
+
+// export default function Login() {
+//   const [email, setEmail] = useState('');
+//   const [pw, setPw] = useState('');
+//   const navigate = useNavigate();
+//   // 👇 언어 설정 가져오기
+//   const { t, toggleLang, lang } = useLanguage();
+
+//   const handleLogin = async () => {
+//     try {
+//       const userCredential = await signInWithEmailAndPassword(auth, email, pw);
+//       const user = userCredential.user;
+
+//       // 1. 관리자 프리패스
+//       if (user.email === "kks3172@naver.com") {
+//         navigate('/home');
+//         return;
+//       }
+
+//       // 2. 일반 유저 체크 (DB 조회)
+//       const userRef = doc(db, "users", user.uid);
+//       const userSnap = await getDoc(userRef);
+
+//       if (userSnap.exists()) {
+//         const userData = userSnap.data();
+        
+//         // 승인 대기 중 체크
+//         if (userData.isApproved === false) {
+//             await signOut(auth);
+//             alert(t.waitingApproval);
+//             return;
+//         }
+        
+//         // 밴 당한 계정 체크
+//         if (userData.isBanned === true) {
+//             await signOut(auth);
+//             alert(t.banned);
+//             return;
+//         }
+//       }
+//       // 3. 통과 -> 홈으로 이동
+//       navigate('/home'); 
+//     } catch (e) { 
+//         alert(t.alertError); 
+//     }
+//   };
+
+//   return (
+//     <div className="container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', position:'relative', minHeight: '100vh', background: '#2c3e50', padding: '20px' }}>
+      
+//       {/* 🇯🇵 언어 변경 버튼 */}
+//       <button 
+//         onClick={toggleLang} 
+//         style={{
+//             position:'absolute', top: 20, right: 20, 
+//             background: 'rgba(255,255,255,0.1)', 
+//             border: '1px solid #ccc', 
+//             color: '#fff', 
+//             padding: '0 12px', 
+//             borderRadius: '20px', 
+//             fontSize: '18px', 
+//             height: '32px',
+//             cursor: 'pointer',
+//             display: 'flex', alignItems: 'center', justifyContent: 'center'
+//         }}
+//       >
+//         {lang === 'ko' ? '🇯🇵' : '🇰🇷'}
+//       </button>
+
+//       <h1 className="title" style={{ color: '#f1c40f', fontSize: '40px', marginBottom: '30px', textAlign: 'center' }}>大当たり</h1>
+      
+//       <div style={{ background: '#34495e', padding: '30px', borderRadius: '15px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+//           <input 
+//             className="input" 
+//             placeholder={t.inputEmail} 
+//             onChange={(e) => setEmail(e.target.value)} 
+//             style={{ width: '100%', marginBottom: '15px', background: '#2c3e50', color: 'white', border: '1px solid #555' }}
+//           />
+//           <input 
+//             className="input" 
+//             type="password" 
+//             placeholder={t.inputPw} 
+//             onChange={(e) => setPw(e.target.value)} 
+//             onKeyDown={(e) => { if(e.key === 'Enter') handleLogin(); }} 
+//             style={{ width: '100%', marginBottom: '20px', background: '#2c3e50', color: 'white', border: '1px solid #555' }}
+//           />
+          
+//           <button className="btn btn-primary" onClick={handleLogin} style={{ width: '100%', padding: '15px', fontSize: '18px', background: '#f1c40f', color: '#2c3e50', fontWeight: 'bold' }}>
+//             {t.login}
+//           </button>
+          
+//           {/* 👇 여기가 중요: t.findAccount 변수를 사용하여 언어 변경 시 텍스트도 변경됨 */}
+//           <div style={{ display:'flex', justifyContent:'space-between', fontSize:'14px', marginTop:'20px', padding:'0 5px' }}>
+//               <span style={{ color:'#bdc3c7', cursor:'pointer', textDecoration:'underline' }} onClick={() => navigate('/find')}>
+//                   {t.findAccount}
+//               </span>
+              
+//               <span style={{ color:'#3498db', cursor:'pointer', fontWeight:'bold' }} onClick={() => navigate('/signup')}>
+//                   {t.signup}
+//               </span>
+//           </div>
+//       </div>
+//     </div>
+//   );
+// }
+
 import React, { useState } from 'react';
-import { auth, db } from '../firebase'; // db 추가
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth'; // signOut 추가
-import { doc, getDoc } from 'firebase/firestore'; // DB 조회 함수 추가
+import { auth, db } from '../firebase';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../LanguageContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
-  
   const navigate = useNavigate();
+  const { t, toggleLang, lang } = useLanguage();
 
   const handleLogin = async () => {
     try {
-      // 1. 로그인 시도
       const userCredential = await signInWithEmailAndPassword(auth, email, pw);
       const user = userCredential.user;
 
-      // 2. 관리자 계정은 프리패스
+      // 1. 관리자 프리패스
       if (user.email === "kks3172@naver.com") {
         navigate('/home');
         return;
       }
 
-      // 3. 일반 유저 승인 여부 확인
+      // 2. 일반 유저 체크
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
-
-        // 🚫 승인 대기 중일 때
+        
+        // 승인 대기 체크
         if (userData.isApproved === false) {
-            await signOut(auth); // 강제 로그아웃
-            alert("⏳ 관리자의 승인 대기 중입니다.\n승인 후 이용 가능합니다.");
+            await signOut(auth);
+            alert(t.waitingApproval);
             return;
         }
-
-        // 🚫 밴 당했을 때 (이중 체크)
+        
+        // 차단 계정 체크
         if (userData.isBanned === true) {
             await signOut(auth);
-            alert("🚫 차단된 계정입니다.");
+            alert(t.banned);
             return;
         }
       }
-
-      // 4. 통과
       navigate('/home'); 
     } catch (e) { 
-        alert("로그인 실패: 이메일이나 비밀번호를 확인하세요."); 
+        alert(t.alertError); 
     }
   };
 
   return (
-    <div className="container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <h1 className="title">大当たり</h1>
+    <div className="container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', position:'relative', minHeight: '100vh', background: '#2c3e50', padding: '20px' }}>
       
-      <input className="input" placeholder="이메일을 입력하세요" onChange={(e) => setEmail(e.target.value)} />
-      <input className="input" type="password" placeholder="비밀번호" onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') handleLogin(); }} />
+      <button 
+        onClick={toggleLang} 
+        style={{
+            position:'absolute', top: 20, right: 20, 
+            background: 'rgba(255,255,255,0.1)', 
+            border: '1px solid #ccc', 
+            color: '#fff', 
+            padding: '0 12px', 
+            borderRadius: '20px', 
+            fontSize: '18px', 
+            height: '32px',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}
+      >
+        {lang === 'ko' ? '🇯🇵' : '🇰🇷'}
+      </button>
+
+      <h1 className="title" style={{ color: '#f1c40f', fontSize: '40px', marginBottom: '30px', textAlign: 'center' }}>大当たり</h1>
       
-      <div style={{ marginTop: 20, display:'flex', flexDirection:'column', gap:10 }}>
-        <button className="btn btn-primary" onClick={handleLogin}>로그인</button>
-        
-        <div style={{display:'flex', justifyContent:'space-between', fontSize:'14px', marginTop:'10px', padding:'0 5px'}}>
-            <span style={{color:'#666', cursor:'pointer', textDecoration:'underline'}} onClick={() => navigate('/find')}>
-                🔑 아이디/비밀번호 찾기
-            </span>
-            <span style={{color:'#3498db', cursor:'pointer', fontWeight:'bold'}} onClick={() => navigate('/signup')}>
-                회원가입
-            </span>
-        </div>
+      <div style={{ background: '#34495e', padding: '30px', borderRadius: '15px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+          <input 
+            className="input" 
+            placeholder={t.inputEmail} 
+            onChange={(e) => setEmail(e.target.value)} 
+            style={{ width: '100%', marginBottom: '15px', background: '#2c3e50', color: 'white', border: '1px solid #555' }}
+          />
+          <input 
+            className="input" 
+            type="password" 
+            placeholder={t.inputPw} 
+            onChange={(e) => setPw(e.target.value)} 
+            onKeyDown={(e) => { if(e.key === 'Enter') handleLogin(); }} 
+            style={{ width: '100%', marginBottom: '20px', background: '#2c3e50', color: 'white', border: '1px solid #555' }}
+          />
+          
+          <button className="btn btn-primary" onClick={handleLogin} style={{ width: '100%', padding: '15px', fontSize: '18px', background: '#f1c40f', color: '#2c3e50', fontWeight: 'bold' }}>
+            {t.login}
+          </button>
+          
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:'14px', marginTop:'20px', padding:'0 5px' }}>
+              <span style={{ color:'#bdc3c7', cursor:'pointer', textDecoration:'underline' }} onClick={() => navigate('/find')}>
+                  {t.findAccount || "아이디/비번 찾기"} 
+              </span>
+              
+              <span style={{ color:'#3498db', cursor:'pointer', fontWeight:'bold' }} onClick={() => navigate('/signup')}>
+                  {t.signup}
+              </span>
+          </div>
       </div>
     </div>
   );

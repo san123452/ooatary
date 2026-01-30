@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore'; 
+import { doc, onSnapshot } from 'firebase/firestore';
+
+// 👇 언어팩 Provider
+import { LanguageProvider } from './LanguageContext';
 
 // 레이아웃
 import Layout from './pages/Layout';
@@ -16,32 +19,37 @@ import SignUp from './pages/SignUp';
 import FindAccount from './pages/FindAccount';
 
 // 게임들
-import Game from './pages/Game';
-import Slot from './pages/Slot';
-import RPS from './pages/RPS';
-import Mining from './pages/Mining';
-import Blackjack from './pages/Blackjack';
-import Fight from './pages/Fight';
-import Roulette from './pages/Roulette';
-import HorseRacing from "./pages/HorseRacing";
-import Ladder from "./pages/Ladder";
-// ❌ 낚시 제거됨
-import Mines from "./pages/Mines";
-import Crash from "./pages/Crash";
-import HighLow from "./pages/HighLow";
-import Roulette2 from "./pages/Roulette2";
-import Ostrich from "./pages/Ostrich";
-import Transfer from './pages/Transfer';
-import GameLobby from './pages/GameLobby';
-import GameRoom from './pages/GameRoom';
-import History from './pages/History';
+import Game from './pages/Game';             // 홀짝
+import AppleGameSingle from './pages/AppleGameSingle'; // 사과 (싱글)
+import Slot from './pages/Slot';             // 슬롯
+import RPS from './pages/RPS';               // 가위바위보
+import Mining from './pages/Mining';         // 가챠 (광질)
+import Blackjack from './pages/Blackjack';   // 블랙잭
+import Fight from './pages/Fight';           // 격투기
+import Roulette from './pages/Roulette';     // 천사악마 룰렛
+import HorseRacing from "./pages/HorseRacing"; // 경마
+import Ladder from "./pages/Ladder";         // 다리다리
+import Mines from "./pages/Mines";           // 지뢰찾기
+import Crash from "./pages/Crash";           // 그래프
+import HighLow from "./pages/HighLow";       // 하이로우
+import Roulette2 from "./pages/Roulette2";   // 유러피언 룰렛
+import Ostrich from "./pages/Ostrich";       // 타조
+import Transfer from './pages/Transfer';     // 송금
+import GameLobby from './pages/GameLobby';   // 멀티 로비
+import GameRoom from './pages/GameRoom';     // 멀티 방
+import History from './pages/History';       // 기록
+import CoinPusherGame from './pages/CoinPusherGame'; // 3D 코인푸셔
+import StackGame from './pages/StackGame'; // 👈 새로 추가
+import Report from './pages/Report'; // 신고
+
 
 // 게시판
-import Board from './pages/Board';
-import BoardWrite from './pages/BoardWrite';
-import BoardDetail from './pages/BoardDetail';
+import Board from './pages/Board';           // 게시판 목록
+import BoardWrite from './pages/BoardWrite'; // 게시판 글쓰기
+import BoardDetail from './pages/BoardDetail'; // 게시판 상세
+import Mailbox from './pages/Mailbox';
 
-const ADMIN_EMAIL = "kks3172@naver.com"; 
+const ADMIN_EMAIL = "kks3172@naver.com";
 
 // 🛡️ [일반 유저 문지기]
 function AuthGuard({ children }) {
@@ -88,11 +96,11 @@ function AdminGuard({ children }) {
 function App() {
   const [isDuplicate, setIsDuplicate] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
-  const [isPending, setIsPending] = useState(false); // ⏳ [추가됨] 승인 대기 상태
-  const [isMaintenance, setIsMaintenance] = useState(false); 
+  const [isPending, setIsPending] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // 1. 다중 탭 방지
+  // 1. 중복 탭 방지
   useEffect(() => {
     const channel = new BroadcastChannel('tab_channel');
     channel.postMessage('new_tab_opened');
@@ -103,53 +111,50 @@ function App() {
     return () => channel.close();
   }, []);
 
-  // 2. 로그인 상태 감지
+  // 2. 유저 상태 감지
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       if (!user) {
-          setIsBanned(false);
-          setIsPending(false); // 로그아웃 시 대기 상태 해제
+        setIsBanned(false);
+        setIsPending(false);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // 3. 🚨 실시간 감시 (밴, 승인대기, 점검)
+  // 3. DB 상태 감지 (밴, 승인대기, 점검)
   useEffect(() => {
-    let unsubUser = () => {};
+    let unsubUser = () => { };
     if (currentUser) {
-        unsubUser = onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                
-                // A. 밴 확인
-                if (data.isBanned === true) setIsBanned(true);
-                else setIsBanned(false);
+      unsubUser = onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.isBanned === true) setIsBanned(true);
+          else setIsBanned(false);
 
-                // B. 승인 대기 확인 (관리자는 제외)
-                if (data.isApproved === false && currentUser.email !== ADMIN_EMAIL) {
-                    setIsPending(true);
-                } else {
-                    setIsPending(false);
-                }
-            }
-        });
+          if (data.isApproved === false && currentUser.email !== ADMIN_EMAIL) {
+            setIsPending(true);
+          } else {
+            setIsPending(false);
+          }
+        }
+      });
     }
 
     const unsubServer = onSnapshot(doc(db, "system", "server"), (docSnap) => {
-        if (docSnap.exists() && docSnap.data().isOpen === false) {
-            if (currentUser?.email !== ADMIN_EMAIL) setIsMaintenance(true);
-            else setIsMaintenance(false); 
-        } else {
-            setIsMaintenance(false); 
-        }
+      if (docSnap.exists() && docSnap.data().isOpen === false) {
+        if (currentUser?.email !== ADMIN_EMAIL) setIsMaintenance(true);
+        else setIsMaintenance(false);
+      } else {
+        setIsMaintenance(false);
+      }
     });
 
     return () => { unsubUser(); unsubServer(); };
   }, [currentUser]);
 
-  // 4. 🔄 강제 새로고침 감지기
+  // 4. 버전 체크
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "info"), (docSnap) => {
       if (docSnap.exists()) {
@@ -160,9 +165,9 @@ function App() {
           console.log("새 버전 감지! 새로고침합니다.");
           localStorage.setItem('app_version', serverVersion);
           if ('caches' in window) {
-             caches.keys().then((names) => {
-                 names.forEach(name => caches.delete(name));
-             });
+            caches.keys().then((names) => {
+              names.forEach(name => caches.delete(name));
+            });
           }
           window.location.reload(true);
         } else if (!localVersion) {
@@ -173,93 +178,92 @@ function App() {
     return () => unsub();
   }, []);
 
-
-  // 🛑 [차단 화면 1] 중복 탭
+  // 차단 화면 렌더링
   if (isDuplicate) return <ErrorScreen title="🚫 경고" msg="사이트를 여러 창에 띄울 수 없습니다." />;
-  
-  // 🛑 [차단 2] 밴 유저
   if (isBanned) return <ErrorScreen title="🚫 접속 차단됨" msg="관리자에 의해 정지되었습니다." btn={true} />;
-
-  // 🛑 [차단 3] ⏳ 승인 대기 유저 (이게 추가됨!)
   if (isPending) {
-      return (
-        <div style={{ height: '100vh', background: '#2c3e50', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center', zIndex: 9999 }}>
-            <h1 style={{fontSize: '3rem'}}>⏳ 승인 대기 중</h1>
-            <h3>회원가입이 완료되었으나,<br/>관리자의 승인이 필요합니다.</h3>
-            <p>승인 완료 후 이용 가능합니다.</p>
-            <button 
-                onClick={() => { signOut(auth); window.location.reload(); }} 
-                style={{padding: '10px 20px', marginTop: 20, cursor:'pointer', fontSize: '16px', borderRadius: '5px'}}
-            >
-                로그아웃
-            </button>
-        </div>
-      );
+    return (
+      <div style={{ height: '100vh', background: '#2c3e50', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center', zIndex: 9999 }}>
+        <h1 style={{ fontSize: '3rem' }}>⏳ 승인 대기 중</h1>
+        <h3>회원가입이 완료되었으나,<br />관리자의 승인이 필요합니다.</h3>
+        <p>승인 완료 후 이용 가능합니다.</p>
+        <button onClick={() => { signOut(auth); window.location.reload(); }} style={{ padding: '10px 20px', marginTop: 20, cursor: 'pointer', fontSize: '16px', borderRadius: '5px' }}>로그아웃</button>
+      </div>
+    );
   }
-
-  // 🛑 [차단 4] 서버 점검
   if (isMaintenance) {
-      return (
-        <div style={{ height: '100vh', background: '#f39c12', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center' }}>
-            <h1 style={{fontSize: '4rem'}}>🚧</h1>
-            <h1 style={{fontSize: '3rem', margin:0}}>서버 점검 중</h1>
-            <h3>현재 서비스 안정화를 위해 점검을 진행하고 있습니다.</h3>
-            <p>잠시 후 다시 접속해주세요.</p>
-            <button onClick={() => window.location.href='/login'} style={{marginTop:50, background:'transparent', border:'none', color:'#f39c12'}}>admin login</button>
-        </div>
-      );
+    return (
+      <div style={{ height: '100vh', background: '#f39c12', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '4rem' }}>🚧</h1>
+        <h1 style={{ fontSize: '3rem', margin: 0 }}>서버 점검 중</h1>
+        <h3>현재 서비스 안정화를 위해 점검을 진행하고 있습니다.</h3>
+        <p>잠시 후 다시 접속해주세요.</p>
+        <button onClick={() => window.location.href = '/login'} style={{ marginTop: 50, background: 'transparent', border: 'none', color: '#f39c12' }}>admin login</button>
+      </div>
+    );
   }
 
-  // ✅ 정상 앱
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<SignUp />} />
-      <Route path="/find" element={<FindAccount />} />
+    <LanguageProvider>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/find" element={<FindAccount />} />
 
-      <Route element={<AuthGuard><Layout /></AuthGuard>}>
-        <Route path="/home" element={<Home />} />
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/board" element={<Board />} />
-        <Route path="/board/write" element={<BoardWrite />} />
-        <Route path="/board/:id" element={<BoardDetail />} />
-        <Route path="/game" element={<Game />} />
-        <Route path="/slot" element={<Slot />} />
-        <Route path="/rps" element={<RPS />} />
-        <Route path="/mining" element={<Mining />} />
-        <Route path="/blackjack" element={<Blackjack />} />
-        <Route path="/fight" element={<Fight />} />
-        <Route path="/roulette" element={<Roulette />} />
-        <Route path="/horseracing" element={<HorseRacing />} />
-        <Route path="/ladder" element={<Ladder />} />
-        {/* ❌ 낚시 라우트 제거됨 */}
-        <Route path="/mines" element={<Mines />} />
-        <Route path="/crash" element={<Crash />} />
-        <Route path="/highlow" element={<HighLow />} />
-        <Route path="/roulette2" element={<Roulette2 />} />
-        <Route path="/ostrich" element={<Ostrich />} />
-        <Route path="/transfer" element={<Transfer />} />
-        <Route path="/gamelobby" element={<GameLobby />} />
-        <Route path="/gameroom/:roomId" element={<GameRoom />} />
-      </Route>
+        {/* 👇 여기가 중요합니다! 경로와 컴포넌트가 정확히 맞는지 확인하세요 */}
+        <Route element={<AuthGuard><Layout /></AuthGuard>}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/transfer" element={<Transfer />} />
+          <Route path="/mailbox" element={<Mailbox />} />
+          <Route path="/report" element={<Report />} />
+          {/* 게시판 경로 */}
+          <Route path="/board" element={<Board />} />           {/* 목록 */}
+          <Route path="/board/write" element={<BoardWrite />} /> {/* 글쓰기 */}
+          <Route path="/board/:id" element={<BoardDetail />} /> {/* 상세 */}
 
-      <Route element={<AdminGuard><Layout /></AdminGuard>}>
-        <Route path="/admin" element={<Admin />} />
-      </Route>
-    </Routes>
+          {/* 게임 경로 */}
+          <Route path="/game" element={<Game />} />             {/* 홀짝 */}
+          <Route path="/slot" element={<Slot />} />             {/* 슬롯 */}
+          <Route path="/apple-single" element={<AppleGameSingle />} /> {/* 사과 */}
+          <Route path="/rps" element={<RPS />} />               {/* 가위바위보 */}
+          <Route path="/mining" element={<Mining />} />         {/* 가챠 */}
+          <Route path="/blackjack" element={<Blackjack />} />   {/* 블랙잭 */}
+          <Route path="/fight" element={<Fight />} />           {/* 격투기 */}
+          <Route path="/roulette" element={<Roulette />} />     {/* 천사악마 */}
+          <Route path="/horseracing" element={<HorseRacing />} /> {/* 경마 */}
+          <Route path="/ladder" element={<Ladder />} />         {/* 다리다리 */}
+          <Route path="/mines" element={<Mines />} />           {/* 지뢰찾기 */}
+          <Route path="/crash" element={<Crash />} />           {/* 그래프 */}
+          <Route path="/highlow" element={<HighLow />} />       {/* 하이로우 */}
+          <Route path="/roulette2" element={<Roulette2 />} />   {/* 유러피언 */}
+          <Route path="/ostrich" element={<Ostrich />} />       {/* 타조 */}
+          <Route path="/coinpusher" element={<CoinPusherGame />} />
+          <Route path="/stack" element={<StackGame />} />
+
+          {/* 멀티플레이 */}
+          <Route path="/gamelobby" element={<GameLobby />} />
+          <Route path="/gameroom/:roomId" element={<GameRoom />} />
+        </Route>
+
+        <Route element={<AdminGuard><Layout /></AdminGuard>}>
+          <Route path="/admin" element={<Admin />} />
+        </Route>
+      </Routes>
+    </LanguageProvider>
   );
 }
 
 function ErrorScreen({ title, msg, btn }) {
-    return (
-        <div style={{ height: '100vh', background: '#2c3e50', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center' }}>
-            <h1 style={{fontSize: '3rem'}}>{title}</h1>
-            <h3>{msg}</h3>
-            {btn && <button onClick={() => { signOut(auth); window.location.reload(); }} style={{padding:'10px 20px', marginTop:20, color:'black', cursor:'pointer'}}>로그아웃</button>}
-        </div>
-    );
+  return (
+    <div style={{ height: '100vh', background: '#2c3e50', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', textAlign: 'center' }}>
+      <h1 style={{ fontSize: '3rem' }}>{title}</h1>
+      <h3>{msg}</h3>
+      {btn && <button onClick={() => { signOut(auth); window.location.reload(); }} style={{ padding: '10px 20px', marginTop: 20, color: 'black', cursor: 'pointer' }}>로그아웃</button>}
+    </div>
+  );
 }
 
 export default App;

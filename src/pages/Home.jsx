@@ -3,6 +3,7 @@ import { db, auth } from '../firebase';
 import { collection, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { useLanguage } from '../LanguageContext';
 
 export default function Home() {
   const [myPoint, setMyPoint] = useState(0);
@@ -12,7 +13,9 @@ export default function Home() {
   const [rankers, setRankers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
+
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -62,137 +65,185 @@ export default function Home() {
     return () => unsubscribeAuth();
   }, [navigate]);
 
-  if (loading) return <div style={{ background: '#2c3e50', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff' }}><h2>로딩 중...</h2></div>;
+  if (loading) return <div style={{ background: '#2c3e50', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff' }}><h2>Loading...</h2></div>;
 
   return (
-    <div className="container" style={{ background: '#2c3e50', minHeight: '100vh', padding: 20, color: 'white' }}>
-
-      {/* 1. 상단 내 정보 카드 */}
-      <div className="card" style={{
-        marginBottom: 15, background: '#34495e', padding: 15, borderRadius: 10,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        border: '1px solid #7f8c8d', boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+    // 🔥 [스타일 수정] 전체 화면을 꽉 채우되, 600px 이상에서는 중앙 정렬하여 앱처럼 보이게 함
+    <div style={{ background: '#2c3e50', minHeight: '100vh', width: '100%', display: 'flex', justifyContent: 'center' }}>
+      <div className="container" style={{ 
+          width: '100%', 
+          maxWidth: '600px', 
+          padding: 20, 
+          color: 'white', 
+          position: 'relative' 
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* 티어 이미지 */}
-          <div style={{ width: 50, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img
-              src={`/tiers/${myTierLevel}.png`}
-              alt={myTierName}
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              onError={e => e.target.style.display = 'none'}
-            />
-          </div>
-          <div>
-            <div style={{ fontSize: '13px', color: '#bdc3c7' }}>{myTierName}</div>
-            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#f1c40f' }}>{Math.floor(myPoint).toLocaleString()}원</span>
-          </div>
-        </div>
-        <button className="btn" style={{ background: '#e74c3c', fontSize: '12px', padding: '5px 10px' }} onClick={() => signOut(auth)}>로그아웃</button>
-      </div>
 
-      {/* 2. 승급 심사 (상점) 버튼 */}
-      <button className="card" style={{
-        width: '100%',
-        background: 'linear-gradient(90deg, #8e44ad, #c0392b)',
-        border: '2px solid #f1c40f', // 노란색 테두리 통일
-        marginBottom: 20, padding: 15, cursor: 'pointer',
-        boxShadow: '0 0 10px rgba(241, 196, 15, 0.3)' // 노란색 광채 효과
-      }} onClick={() => navigate('/shop')}>
-        <div style={{ textAlign: 'center', color: 'white', fontSize: '18px', fontWeight: 'bold' }}>
-          🏆 상점
-        </div>
-      </button>
-
-      {/* 3. 공지사항 */}
-      {notice && (
-        <div style={{ background: '#f39c12', color: '#2c3e50', padding: '10px 15px', marginBottom: '20px', borderRadius: '8px', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
-          <span style={{ marginRight: '10px' }}>📢</span><marquee>{notice}</marquee>
-        </div>
-      )}
-
-      {/* 4. 랭킹 리스트 */}
-      <div className="card" style={{ background: '#222', border: '2px solid #f1c40f', marginBottom: 20 }}>
-        <div style={{ textAlign: 'center', marginBottom: 15, color: '#f1c40f', fontWeight: 'bold', fontSize: '16px', paddingBottom: 10, borderBottom: '1px solid #444' }}>🏆 전체 티어 랭킹 TOP 10</div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {rankers.map((user, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: idx === 0 ? 'rgba(241, 196, 15, 0.1)' : 'transparent', borderRadius: 5 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ width: '20px', textAlign: 'center', color: idx < 3 ? '#f1c40f' : '#7f8c8d', fontWeight: 'bold' }}>{idx + 1}</span>
-                <img
-                  src={`/tiers/${user.tierLevel}.png`}
-                  alt={user.tierName}
-                  style={{ width: '30px', height: '30px', objectFit: 'contain' }}
-                  onError={e => e.target.style.display = 'none'}
-                />
-                <span style={{ fontSize: '14px' }}>{user.name || "익명"}</span>
-              </div>
-              <span style={{ color: '#f1c40f', fontSize: '14px' }}>{Math.floor(user.point).toLocaleString()}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ textAlign: 'center', marginTop: 15 }}><button onClick={() => window.location.reload()} style={{ fontSize: '12px', background: 'transparent', border: 'none', color: '#777', cursor: 'pointer' }}>🔄 랭킹 업데이트</button></div>
-      </div>
-
-      {/* 5. 게임 존 (GAME ZONE) */}
-      <div className="card" style={{
-        background: '#34495e',
-        border: '2px solid #f1c40f', // ✨ 요청하신 노란색 테두리 적용!
-        marginBottom: 20, padding: '20px',
-        position: 'relative'
-      }}>
-        <div style={{
-          position: 'absolute', top: -12, left: 20, background: '#2c3e50', padding: '0 10px',
-          color: '#f1c40f', fontWeight: 'bold', fontSize: '16px'
+        {/* 1. 상단 내 정보 카드 */}
+        <div className="card" style={{
+          marginBottom: 15, background: '#34495e', padding: 15, borderRadius: 10,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          border: '1px solid #7f8c8d', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', marginTop: 10
         }}>
-          🎮 GAME ZONE
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div style={{ width: 50, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '50%' }}>
+              <img
+                src={`/tiers/${myTierLevel}.png`}
+                alt={myTierName}
+                style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+                onError={e => e.target.style.display = 'none'}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', color: '#bdc3c7', marginBottom: 2 }}>{myTierName}</div>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#f1c40f' }}>{Math.floor(myPoint).toLocaleString()}원</span>
+            </div>
+          </div>
+          <button className="btn" style={{ background: '#e74c3c', fontSize: '12px', padding: '8px 12px', borderRadius: '6px', border:'none', color:'white', cursor:'pointer' }} onClick={() => signOut(auth)}>{t.logout}</button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: 10 }}>
-          {/* 가챠 & 무료충전 */}
-          <button className="btn" style={{ background: '#27ae60', padding: '15px', borderRadius: '8px', fontSize: '16px' }} onClick={() => navigate('/mining')}>💎 가챠가챠</button>
-          <button className="btn" style={{ background: '#b6cf26', padding: '15px', borderRadius: '8px', fontSize: '16px' }} onClick={() => navigate('/board')}>👑테토카페(시즌3)</button>
+        {/* 2. 승급 심사 (상점) 버튼 */}
+        <button className="card" style={{
+          width: '100%',
+          background: 'linear-gradient(90deg, #8e44ad, #c0392b)',
+          border: '2px solid #f1c40f',
+          borderRadius: '10px',
+          marginBottom: 20, padding: 15, cursor: 'pointer',
+          boxShadow: '0 4px 10px rgba(241, 196, 15, 0.2)',
+          display: 'flex', alignItems:'center', justifyContent:'center'
+        }} onClick={() => navigate('/shop')}>
+          <div style={{ textAlign: 'center', color: 'white', fontSize: '18px', fontWeight: 'bold' }}>
+            {t.shop}
+          </div>
+        </button>
 
+        {/* 3. 공지사항 */}
+        {notice && (
+          <div style={{ background: '#f39c12', color: '#2c3e50', padding: '10px 15px', marginBottom: '20px', borderRadius: '8px', display: 'flex', alignItems: 'center', fontWeight: 'bold', border: '1px solid #e67e22' }}>
+            <span style={{ marginRight: '10px' }}>{t.notice}</span><marquee>{notice}</marquee>
+          </div>
+        )}
 
-          {/* 배틀 아레나 (강조) */}
-          <button className="btn" style={{ background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', padding: '15px', borderRadius: '8px', gridColumn: 'span 2', fontSize: '16px', border: '1px solid #aab7b8' }} onClick={() => navigate('/gamelobby')}>
-            ⚔️ 1:1  (PvP)
-          </button>
+        {/* 4. 랭킹 리스트 */}
+        <div className="card" style={{ background: '#222', border: '2px solid #f1c40f', marginBottom: 20, borderRadius: '10px', overflow:'hidden' }}>
+          <div style={{ textAlign: 'center', background: '#2c3e50', padding: '10px', color: '#f1c40f', fontWeight: 'bold', fontSize: '16px', borderBottom: '1px solid #444' }}>{t.rank} TOP 10</div>
 
-          {/* 일반 게임들 */}
-          <button className="btn" style={{ background: '#e74c3c', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/game')}>🎲 홀짝</button>
-          <button className="btn" style={{ background: '#8e44ad', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/slot')}>🎰 슬롯</button>
-          <button className="btn" style={{ background: '#2980b9', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/rps')}>✌️ 가위바위보</button>
-          <button className="btn" style={{ background: '#d35400', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/blackjack')}>🃏 블랙잭</button>
-          <button className="btn" style={{ background: '#c0392b', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/fight')}>🥊 격투기</button>
-          <button className="btn" style={{ background: '#f39c12', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/roulette')}>🎡 천사악마</button>
-          <button className="btn" style={{ background: '#1abc9c', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/horseracing')}>🏇 경마장</button>
-          <button className="btn" style={{ background: '#34495e', padding: '15px', borderRadius: '8px', border: '1px solid #7f8c8d' }} onClick={() => navigate('/ladder')}>🎢 다리다리</button>
-          {/* <button className="btn" style={{ background: '#0984e3', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/fishing')}>🎣 낚시게임</button> */}
-          <button className="btn" style={{ background: '#16a085', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/mines')}>💣 지뢰찾기</button>
-          <button className="btn" style={{ background: '#9b59b6', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/crash')}>🚀 그래프</button>
-          <button className="btn" style={{ background: '#2c3e50', padding: '15px', borderRadius: '8px', border: '1px solid #7f8c8d' }} onClick={() => navigate('/highlow')}>🃏 하이로우</button>
-          {/* <button className="btn" style={{ background: '#8e44ad', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/keno')}>🎱 키노</button> */}
-          <button className="btn" style={{ background: '#d35400', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/roulette2')}>🎡 유러피언</button>
-          <button className="btn" style={{ background: '#ff6b6b', padding: '15px', borderRadius: '8px' }} onClick={() => navigate('/ostrich')}>🦩 타조 게임</button>
-
-          {/* 송금하기 (하단 강조) */}
-        
-        </div>
-      </div>
-
-      {/* 6. 관리자 전용 메뉴 */}
-      {isAdmin && (
-        <div className="card" style={{ background: '#2c3e50', border: '1px dashed #f1c40f', marginBottom: 20, padding: 15 }}>
-          <div style={{ marginBottom: 10, textAlign: 'center', color: '#f1c40f', fontWeight: 'bold' }}>👑 관리자 전용</div>
-          <div className="flex-row">
-            <button className="btn" style={{ flex: 1, background: '#f1c40f', color: '#2c3e50', fontWeight: 'bold' }} onClick={() => navigate('/admin')}>📢 공지 관리</button>
-            <button className="btn" style={{ flex: 1, background: '#333', border: '1px solid #555' }} onClick={() => navigate('/admin')}>👥 회원 관리</button>
+          <div style={{ display: 'flex', flexDirection: 'column', padding: '5px' }}>
+            {rankers.map((user, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', borderBottom: idx !== rankers.length - 1 ? '1px solid #333' : 'none', background: idx === 0 ? 'rgba(241, 196, 15, 0.1)' : 'transparent' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '20px', textAlign: 'center', color: idx < 3 ? '#f1c40f' : '#7f8c8d', fontWeight: 'bold', fontSize:'14px' }}>{idx + 1}</span>
+                  <img
+                    src={`/tiers/${user.tierLevel}.png`}
+                    alt={user.tierName}
+                    style={{ width: '25px', height: '25px', objectFit: 'contain' }}
+                    onError={e => e.target.style.display = 'none'}
+                  />
+                  <span style={{ fontSize: '14px', fontWeight: idx===0?'bold':'normal' }}>{user.name || "익명"}</span>
+                </div>
+                <span style={{ color: '#f1c40f', fontSize: '14px', fontWeight: 'bold' }}>{Math.floor(user.point).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', padding: '10px', background:'#2c3e50', borderTop:'1px solid #444' }}>
+            <button onClick={() => window.location.reload()} style={{ fontSize: '12px', background: 'transparent', border: 'none', color: '#bdc3c7', cursor: 'pointer', display:'flex', alignItems:'center', justifyContent:'center', width:'100%' }}>{t.updateRank}</button>
           </div>
         </div>
-      )}
 
+        {/* 5. 게임 존 (GAME ZONE) */}
+        <div className="card" style={{
+          background: '#34495e',
+          border: '2px solid #f1c40f',
+          marginBottom: 20, padding: '20px',
+          borderRadius: '10px',
+          position: 'relative',
+          marginTop: '30px'
+        }}>
+          <div style={{
+            position: 'absolute', top: -14, left: 20, background: '#2c3e50', padding: '0 15px',
+            color: '#f1c40f', fontWeight: 'bold', fontSize: '18px',
+            border: '2px solid #f1c40f', borderRadius: '20px'
+          }}>
+            {t.gameZone}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: 15 }}>
+            
+            {/* ⚔️ 1. 메인 컨텐츠 (크게 유지) */}
+            <button className="btn" style={{ background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', padding: '20px', borderRadius: '10px', gridColumn: 'span 2', fontSize: '18px', fontWeight:'bold', border: '1px solid rgba(255,255,255,0.2)', color:'white', cursor:'pointer' }} onClick={() => navigate('/gamelobby')}>{t.pvp}</button>
+            <button className="btn" style={{ background: '#b6cf26', padding: '15px', borderRadius: '10px', fontSize: '16px', gridColumn: 'span 2', fontWeight:'bold', border:'none', color:'#2c3e50', cursor:'pointer' }} onClick={() => navigate('/board')}>{t.cafe}</button>
+
+            <div style={{ gridColumn: 'span 2', height: '1px', background: '#555', margin: '10px 0' }} />
+
+            {/* 🔥 2. 신작 게임 */}
+            <button 
+              className="btn" 
+              style={{ background: 'linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)', padding: '15px', borderRadius: '10px', border: 'none', position: 'relative', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'14px' }} 
+              onClick={() => navigate('/coinpusher')}
+            >
+               {t.highway || "Highway"}
+              <span style={{ position: 'absolute', top: -5, right: -5, fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', fontWeight:'bold', boxShadow:'0 2px 4px rgba(0,0,0,0.3)' }}>N</span>
+            </button>
+
+            <button 
+              className="btn" 
+              style={{ background: 'linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)', padding: '15px', borderRadius: '10px', border: 'none', position: 'relative', color:'white', fontWeight:'bold', cursor:'pointer', fontSize:'14px' }} 
+              onClick={() => navigate('/stack')}
+            >
+               {t.stack || "Stack"}
+              <span style={{ position: 'absolute', top: -5, right: -5, fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', fontWeight:'bold', boxShadow:'0 2px 4px rgba(0,0,0,0.3)' }}>N</span>
+            </button>
+
+            {/* 🎲 3. 기존 아케이드 게임들 */}
+            <GameBtn title={t.oddEven} color="#e74c3c" onClick={() => navigate('/game')} />
+            <GameBtn title={t.slot} color="#8e44ad" onClick={() => navigate('/slot')} />
+            <GameBtn title={t.rps} color="#2980b9" onClick={() => navigate('/rps')} />
+            <GameBtn title={t.blackjack} color="#d35400" onClick={() => navigate('/blackjack')} />
+            <GameBtn title={t.angelDemon} color="#f39c12" onClick={() => navigate('/roulette')} />
+            {/* <GameBtn title={t.ladder} color="#34495e" border="#7f8c8d" onClick={() => navigate('/ladder')} /> */}
+            <GameBtn title={t.mines} color="#16a085" onClick={() => navigate('/mines')} />
+            <GameBtn title={t.graph} color="#9b59b6" onClick={() => navigate('/crash')} />
+            <GameBtn title={t.highlow} color="#2c3e50" border="#7f8c8d" onClick={() => navigate('/highlow')} />
+            {/* <GameBtn title={t.european} color="#d35400" onClick={() => navigate('/roulette2')} /> */}
+            <GameBtn title={t.ostrich} color="#ff6b6b" onClick={() => navigate('/ostrich')} />
+            <GameBtn title={t.apple} color="#e74c3c" onClick={() => navigate('/apple-single')} />
+
+          </div>
+        </div>
+
+        {/* 6. 관리자 전용 메뉴 */}
+        {isAdmin && (
+          <div className="card" style={{ background: '#2c3e50', border: '2px dashed #f1c40f', marginBottom: 20, padding: 15, borderRadius:'10px' }}>
+            <div style={{ marginBottom: 10, textAlign: 'center', color: '#f1c40f', fontWeight: 'bold' }}>{t.adminOnly}</div>
+            <div className="flex-row">
+              <button className="btn" style={{ width: '100%', background: '#333', border: '1px solid #555', padding:'10px', color:'white', cursor:'pointer', borderRadius:'6px' }} onClick={() => navigate('/admin')}>{t.adminPage}</button>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
+}
+
+// 🎨 작은 게임 버튼 컴포넌트 (스타일 통일용)
+function GameBtn({ title, color, onClick, border }) {
+    return (
+        <button 
+            onClick={onClick} 
+            style={{ 
+                background: color, 
+                padding: '15px 5px', 
+                borderRadius: '8px', 
+                color: 'white', 
+                border: border ? `1px solid ${border}` : 'none', 
+                cursor: 'pointer', 
+                fontWeight: 'bold',
+                fontSize: '14px',
+                width: '100%',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
+        >
+            {title}
+        </button>
+    );
 }
