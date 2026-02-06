@@ -151,13 +151,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, getDoc, doc, limit, updateDoc } from 'firebase/firestore';
+// 🔥 increment 추가됨
+import { collection, query, where, getDocs, addDoc, serverTimestamp, getDoc, doc, limit, updateDoc, increment } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
 
 const ADMIN_EMAIL = "kks3172@naver.com";
 
-// 📅 오늘 날짜
 const getToday = () => {
     const d = new Date();
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -175,7 +175,6 @@ export default function Report() {
     const [selectedReason, setSelectedReason] = useState(null);
     const [customReason, setCustomReason] = useState("");
 
-    // 🚨 [추가] 일일 제한
     const MAX_DAILY_REPORT = 3;
     const [dailyCount, setDailyCount] = useState(0);
 
@@ -187,7 +186,6 @@ export default function Report() {
         { id: 5, label: t.r_reason_5 }
     ];
 
-    // 내 정보 로드
     useEffect(() => {
         if (!user) { navigate('/login'); return; }
         const fetchMyInfo = async () => {
@@ -222,8 +220,6 @@ export default function Report() {
 
     const handleSubmit = async () => {
         if (!selectedTarget) return;
-        
-        // 🔒 [추가] 제한 체크
         if (dailyCount >= MAX_DAILY_REPORT) return alert(t.limit_reached);
 
         const reasonText = selectedReason === 5 ? customReason : REPORT_REASONS.find(r => r.id === selectedReason).label;
@@ -233,7 +229,7 @@ export default function Report() {
 
         try {
             const userRef = doc(db, "users", user.uid);
-            const userSnap = await getDoc(userRef); // 최신 정보 확인
+            const userSnap = await getDoc(userRef); 
             const userData = userSnap.data();
             const today = getToday();
 
@@ -252,6 +248,7 @@ export default function Report() {
 
             const myName = userData.name || "Unknown";
 
+            // 1. 관리자에게 쪽지 전송 (기존 유지)
             await addDoc(collection(db, "messages"), {
                 senderUid: user.uid,
                 senderName: myName,
@@ -262,6 +259,7 @@ export default function Report() {
                 createdAt: serverTimestamp()
             });
 
+            // 2. 관리자에게 알림 전송 (기존 유지)
             await addDoc(collection(db, "notifications"), {
                 receiverUid: adminUser.id,
                 senderUid: user.uid,
@@ -271,7 +269,13 @@ export default function Report() {
                 createdAt: serverTimestamp()
             });
 
-            // 📝 [추가] 카운트 증가
+            // 🔥 3. [추가됨] 대상 유저의 신고 횟수(reportCount) 1 증가
+            const targetUserRef = doc(db, "users", selectedTarget.id);
+            await updateDoc(targetUserRef, {
+                reportCount: increment(1)
+            });
+
+            // 4. 내 일일 신고 횟수 증가 (기존 유지)
             const newCount = currentCount + 1;
             await updateDoc(userRef, {
                 dailyReportCount: newCount,
@@ -288,14 +292,12 @@ export default function Report() {
         }
     };
 
-    // 남은 횟수
     const remainCount = Math.max(0, MAX_DAILY_REPORT - dailyCount);
 
     return (
         <div className="container" style={{ paddingTop: 30, background: '#1e272e', minHeight: '100vh', color: 'white', padding: '20px' }}>
             <h1 style={{ color: '#e74c3c', marginBottom: 20 }}>{t.r_title}</h1>
 
-            {/* 🟢 [추가] 남은 횟수 표시 */}
             <div style={{ textAlign: 'center', marginBottom: 20, fontSize: 14, color: remainCount > 0 ? '#2ecc71' : '#e74c3c' }}>
                 {remainCount > 0 ? t.daily_limit_report.replace('{n}', remainCount) : t.limit_reached}
             </div>
@@ -351,7 +353,6 @@ export default function Report() {
 
                     <div style={{ display:'flex', gap:10 }}>
                         <button className="btn" style={{ flex:1, background: '#7f8c8d' }} onClick={() => setStep(1)}>{t.r_prev}</button>
-                        {/* 🔒 [수정] 횟수 다 쓰면 버튼 비활성화 */}
                         <button 
                             className="btn" 
                             style={{ flex:1, background: remainCount > 0 ? '#e74c3c' : '#555', cursor: remainCount > 0 ? 'pointer' : 'not-allowed' }} 

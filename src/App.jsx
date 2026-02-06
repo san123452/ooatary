@@ -41,6 +41,9 @@ import History from './pages/History';       // 기록
 import CoinPusherGame from './pages/CoinPusherGame'; // 3D 코인푸셔
 import StackGame from './pages/StackGame'; // 👈 새로 추가
 import Report from './pages/Report'; // 신고
+import Game2048 from './pages/Game2048'; // 2048 게임
+import GameSuika from './pages/GameSuika';
+import GameTetris from './pages/GameTetris';
 
 
 // 게시판
@@ -241,7 +244,10 @@ function App() {
           <Route path="/roulette2" element={<Roulette2 />} />   {/* 유러피언 */}
           <Route path="/ostrich" element={<Ostrich />} />       {/* 타조 */}
           <Route path="/coinpusher" element={<CoinPusherGame />} />
+          <Route path="/game2048" element={<Game2048 />} />
           <Route path="/stack" element={<StackGame />} />
+          <Route path="/suika" element={<GameSuika />} />
+          <Route path="/tetris" element={<GameTetris />} />
 
           {/* 멀티플레이 */}
           <Route path="/gamelobby" element={<GameLobby />} />

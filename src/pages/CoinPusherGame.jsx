@@ -1,6 +1,6 @@
 // import React, { useState, useEffect, useRef, Suspense, useMemo, memo, useImperativeHandle, forwardRef } from 'react';
 // import { Canvas, useFrame, useThree } from '@react-three/fiber';
-// import { PerspectiveCamera, Sky, Trail, Float, Stars, RoundedBox, MeshDistortMaterial, Sphere } from '@react-three/drei';
+// import { PerspectiveCamera, Sky, Trail, Float, Stars, RoundedBox } from '@react-three/drei';
 // import { EffectComposer, Bloom, Vignette, ChromaticAberration, DepthOfField } from '@react-three/postprocessing';
 // import * as THREE from 'three';
 // import { db, auth } from '../firebase';
@@ -19,7 +19,8 @@
 //     ITEM_SPAWN_RATE: 0.30,
 //     BASE_SPAWN_INTERVAL: 1.4,
 //     MIN_SPAWN_INTERVAL: 0.4,
-//     POOL_SIZE: 60, // ⚡ 오브젝트 풀 크기 (미리 만들어둘 개수)
+//     POOL_SIZE: 80, // 🔥 증가
+//     MAX_DELTA: 0.033, // 🔥 30fps 이하 방지
 // };
 
 // const LANES = Array.from({ length: CONFIG.LANE_COUNT }, (_, i) => 
@@ -33,6 +34,8 @@
 //         this.engineOsc = null;
 //         this.engineGain = null;
 //         this.isMuted = false;
+//         this.soundQueue = []; // 🔥 사운드 큐
+//         this.lastSoundTime = {}; // 🔥 디바운싱
 //     }
 
 //     init() {
@@ -83,67 +86,72 @@
 //         this.init();
 //         if (this.isMuted) return;
 
+//         // 🔥 디바운싱: 같은 사운드 0.05초 내 중복 방지
+//         const now = performance.now();
+//         if (this.lastSoundTime[type] && now - this.lastSoundTime[type] < 50) return;
+//         this.lastSoundTime[type] = now;
+
 //         const osc = this.ctx.createOscillator();
 //         const gain = this.ctx.createGain();
 //         osc.connect(gain);
 //         gain.connect(this.ctx.destination);
 
-//         const now = this.ctx.currentTime;
+//         const ct = this.ctx.currentTime;
 
 //         switch(type) {
 //             case 'move':
 //                 osc.type = 'sine';
-//                 osc.frequency.setValueAtTime(400, now);
-//                 osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
-//                 gain.gain.setValueAtTime(0.12, now);
-//                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-//                 osc.start(now);
-//                 osc.stop(now + 0.08);
+//                 osc.frequency.setValueAtTime(400, ct);
+//                 osc.frequency.exponentialRampToValueAtTime(800, ct + 0.08);
+//                 gain.gain.setValueAtTime(0.12, ct);
+//                 gain.gain.exponentialRampToValueAtTime(0.001, ct + 0.08);
+//                 osc.start(ct);
+//                 osc.stop(ct + 0.08);
 //                 break;
 //             case 'coin':
 //                 osc.type = 'sine';
-//                 osc.frequency.setValueAtTime(1400, now);
-//                 osc.frequency.exponentialRampToValueAtTime(2200, now + 0.15);
-//                 gain.gain.setValueAtTime(0.15, now);
-//                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-//                 osc.start(now);
-//                 osc.stop(now + 0.25);
+//                 osc.frequency.setValueAtTime(1400, ct);
+//                 osc.frequency.exponentialRampToValueAtTime(2200, ct + 0.15);
+//                 gain.gain.setValueAtTime(0.15, ct);
+//                 gain.gain.exponentialRampToValueAtTime(0.001, ct + 0.25);
+//                 osc.start(ct);
+//                 osc.stop(ct + 0.25);
 //                 break;
 //             case 'boost':
 //                 osc.type = 'sawtooth';
-//                 osc.frequency.setValueAtTime(100, now);
-//                 osc.frequency.linearRampToValueAtTime(300, now + 0.4);
-//                 gain.gain.setValueAtTime(0.25, now);
-//                 gain.gain.linearRampToValueAtTime(0.001, now + 0.4);
-//                 osc.start(now);
-//                 osc.stop(now + 0.4);
+//                 osc.frequency.setValueAtTime(100, ct);
+//                 osc.frequency.linearRampToValueAtTime(300, ct + 0.4);
+//                 gain.gain.setValueAtTime(0.25, ct);
+//                 gain.gain.linearRampToValueAtTime(0.001, ct + 0.4);
+//                 osc.start(ct);
+//                 osc.stop(ct + 0.4);
 //                 break;
 //             case 'crash':
 //                 osc.type = 'sawtooth';
-//                 osc.frequency.setValueAtTime(150, now);
-//                 osc.frequency.exponentialRampToValueAtTime(20, now + 0.8);
-//                 gain.gain.setValueAtTime(0.4, now);
-//                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-//                 osc.start(now);
-//                 osc.stop(now + 0.8);
+//                 osc.frequency.setValueAtTime(150, ct);
+//                 osc.frequency.exponentialRampToValueAtTime(20, ct + 0.8);
+//                 gain.gain.setValueAtTime(0.4, ct);
+//                 gain.gain.exponentialRampToValueAtTime(0.001, ct + 0.8);
+//                 osc.start(ct);
+//                 osc.stop(ct + 0.8);
 //                 break;
 //             case 'combo':
 //                 osc.type = 'triangle';
-//                 osc.frequency.setValueAtTime(800, now);
-//                 osc.frequency.exponentialRampToValueAtTime(1600, now + 0.12);
-//                 gain.gain.setValueAtTime(0.1, now);
-//                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-//                 osc.start(now);
-//                 osc.stop(now + 0.12);
+//                 osc.frequency.setValueAtTime(800, ct);
+//                 osc.frequency.exponentialRampToValueAtTime(1600, ct + 0.12);
+//                 gain.gain.setValueAtTime(0.1, ct);
+//                 gain.gain.exponentialRampToValueAtTime(0.001, ct + 0.12);
+//                 osc.start(ct);
+//                 osc.stop(ct + 0.12);
 //                 break;
 //             case 'shield':
 //                 osc.type = 'sine';
-//                 osc.frequency.setValueAtTime(600, now);
-//                 osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
-//                 gain.gain.setValueAtTime(0.2, now);
-//                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-//                 osc.start(now);
-//                 osc.stop(now + 0.3);
+//                 osc.frequency.setValueAtTime(600, ct);
+//                 osc.frequency.exponentialRampToValueAtTime(1200, ct + 0.2);
+//                 gain.gain.setValueAtTime(0.2, ct);
+//                 gain.gain.exponentialRampToValueAtTime(0.001, ct + 0.3);
+//                 osc.start(ct);
+//                 osc.stop(ct + 0.3);
 //                 break;
 //         }
 //     }
@@ -187,49 +195,55 @@
 //     } catch (e) { return []; }
 // };
 
-// // ==================== 🚙 POOLED OBJECT COMPONENT (최적화 핵심) ====================
-// // 미리 생성된 객체를 재사용하여 GC(Garbage Collection) 렉을 방지
+// // ==================== 🚙 POOLED OBJECT COMPONENT ====================
 // const PooledGameEntity = forwardRef((props, ref) => {
 //     const groupRef = useRef();
-//     const [type, setType] = useState(null);
-//     const [visible, setVisible] = useState(false);
+//     const meshRef = useRef(); // 🔥 메쉬 직접 참조
+//     const stateRef = useRef({ type: null, visible: false, rotationSpeed: 0 }); // 🔥 State 대신 Ref
 
 //     useImperativeHandle(ref, () => ({
 //         activate: (newType, x, z) => {
-//             setType(newType);
-//             setVisible(true);
+//             stateRef.current.type = newType;
+//             stateRef.current.visible = true;
+//             stateRef.current.rotationSpeed = 0.03 + Math.random() * 0.02; // 🔥 랜덤 회전속도
 //             if (groupRef.current) {
 //                 groupRef.current.position.set(x, 0, z);
 //                 groupRef.current.visible = true;
 //             }
 //         },
 //         deactivate: () => {
-//             setVisible(false);
+//             stateRef.current.visible = false;
 //             if (groupRef.current) groupRef.current.visible = false;
 //         },
-//         isActive: () => visible,
+//         isActive: () => stateRef.current.visible,
 //         updatePosition: (z) => {
 //             if (groupRef.current) groupRef.current.position.z = z;
 //         },
+//         setX: (x) => {
+//             if (groupRef.current) groupRef.current.position.x = x;
+//         },
 //         getPosition: () => groupRef.current ? groupRef.current.position : new THREE.Vector3(),
-//         getType: () => type
+//         getType: () => stateRef.current.type
 //     }));
 
-//     // 애니메이션 로직 (visible일 때만 작동)
+//     // 🔥 애니메이션 최적화: visible일 때만 회전
 //     useFrame(() => {
-//         if (!visible || !groupRef.current) return;
+//         if (!stateRef.current.visible || !meshRef.current) return;
+//         const type = stateRef.current.type;
 //         if (type === 'coin' || type === 'boost' || type === 'shield' || type === 'magnet' || type === 'slowmotion' || type === 'doublepoints') {
-//             groupRef.current.rotation.y += 0.03;
+//             meshRef.current.rotation.y += stateRef.current.rotationSpeed;
 //         }
 //     });
 
-//     if (!visible) return <group ref={groupRef} visible={false} />;
+//     if (!stateRef.current.visible) return <group ref={groupRef} visible={false} />;
+
+//     const type = stateRef.current.type;
 
 //     return (
 //         <group ref={groupRef}>
 //             {type === 'coin' && (
 //                 <Float speed={6} rotationIntensity={2} floatIntensity={0.4}>
-//                     <group position={[0, 0.6, 0]}>
+//                     <group position={[0, 0.6, 0]} ref={meshRef}>
 //                         <mesh rotation={[Math.PI/2, 0, 0]}>
 //                             <cylinderGeometry args={[0.5, 0.5, 0.1, 24]} />
 //                             <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={1.2} metalness={0.9} roughness={0.1} />
@@ -240,7 +254,7 @@
 //             )}
 //             {type === 'boost' && (
 //                 <Float speed={8} rotationIntensity={4} floatIntensity={0.6}>
-//                     <group position={[0, 0.6, 0]}>
+//                     <group position={[0, 0.6, 0]} ref={meshRef}>
 //                         <mesh>
 //                             <octahedronGeometry args={[0.55, 0]} />
 //                             <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={3} toneMapped={false} />
@@ -251,7 +265,7 @@
 //             )}
 //             {type === 'magnet' && (
 //                 <Float speed={5} rotationIntensity={2} floatIntensity={0.5}>
-//                     <group position={[0, 0.6, 0]}>
+//                     <group position={[0, 0.6, 0]} ref={meshRef}>
 //                         <mesh rotation={[0, 0, Math.PI]}>
 //                             <torusGeometry args={[0.45, 0.15, 12, 24, Math.PI]} />
 //                             <meshStandardMaterial color="#e74c3c" metalness={0.8} />
@@ -266,7 +280,7 @@
 //             )}
 //             {type === 'shield' && (
 //                 <Float speed={7} rotationIntensity={3} floatIntensity={0.6}>
-//                     <group position={[0, 0.6, 0]}>
+//                     <group position={[0, 0.6, 0]} ref={meshRef}>
 //                         <mesh>
 //                             <dodecahedronGeometry args={[0.55, 0]} />
 //                             <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={2.5} metalness={0.9} roughness={0.1} />
@@ -277,7 +291,7 @@
 //             )}
 //             {type === 'slowmotion' && (
 //                 <Float speed={6} rotationIntensity={3} floatIntensity={0.5}>
-//                     <group position={[0, 0.6, 0]}>
+//                     <group position={[0, 0.6, 0]} ref={meshRef}>
 //                         <mesh>
 //                             <icosahedronGeometry args={[0.55, 0]} />
 //                             <meshStandardMaterial color="#9c27b0" emissive="#9c27b0" emissiveIntensity={2.5} metalness={0.9} roughness={0.1} />
@@ -288,7 +302,7 @@
 //             )}
 //             {type === 'doublepoints' && (
 //                 <Float speed={7} rotationIntensity={3} floatIntensity={0.6}>
-//                     <group position={[0, 0.6, 0]}>
+//                     <group position={[0, 0.6, 0]} ref={meshRef}>
 //                         <mesh>
 //                             <octahedronGeometry args={[0.55, 0]} />
 //                             <meshStandardMaterial color="#ff6600" emissive="#ff6600" emissiveIntensity={2.5} metalness={0.9} roughness={0.1} />
@@ -327,7 +341,7 @@
 //     );
 // });
 
-// // ==================== 🚗 SUPER CAR (최적화) ====================
+// // ==================== 🚗 SUPER CAR ====================
 // const SuperCar = memo(({ laneIndex, isBoosting, isRecovering, hasMagnet, hasShield, theme }) => {
 //     const meshRef = useRef();
 //     const currentX = useRef(0);
@@ -344,9 +358,11 @@
 //     }, [isBoosting, theme]);
 
 //     useFrame((state, delta) => {
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
 //         const targetX = LANES[laneIndex];
-//         // 부드러운 이동 (lerp)
-//         currentX.current = THREE.MathUtils.lerp(currentX.current, targetX, 15 * delta);
+        
+//         // 🔥 더 부드러운 이동
+//         currentX.current = THREE.MathUtils.lerp(currentX.current, targetX, 18 * safeDelta);
 
 //         if (meshRef.current) {
 //             meshRef.current.position.x = currentX.current;
@@ -355,18 +371,18 @@
 //             if (isBoosting) {
 //                 meshRef.current.position.y = 0.35 + Math.sin(state.clock.elapsedTime * 15) * 0.04;
 //             } else {
-//                 meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0.3, delta * 4);
+//                 meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0.3, safeDelta * 4);
 //             }
 //         }
         
-//         const wheelSpeed = delta * (isBoosting ? 35 : 18);
+//         const wheelSpeed = safeDelta * (isBoosting ? 35 : 18);
 //         wheelRefs.forEach(ref => {
 //             if (ref.current) ref.current.rotation.y += wheelSpeed;
 //         });
         
 //         if (shieldRef.current) {
-//             shieldRef.current.rotation.y += delta * 3;
-//             shieldRef.current.rotation.z += delta * 1.5;
+//             shieldRef.current.rotation.y += safeDelta * 3;
+//             shieldRef.current.rotation.z += safeDelta * 1.5;
 //         }
         
 //         if (glowRef.current) {
@@ -378,14 +394,15 @@
 //         <group ref={meshRef} position={[0, 0.3, 0]}>
 //             {(isRecovering || isBoosting || hasShield) && (
 //                 <group ref={shieldRef}>
-//                     <Sphere args={[1.6, 16, 16]}>
+//                     <mesh>
+//                         <sphereGeometry args={[1.6, 16, 16]} />
 //                         <meshBasicMaterial 
 //                             color={hasShield ? '#00ff00' : isBoosting ? '#00ffff' : '#ffaa00'} 
 //                             transparent 
 //                             opacity={0.12} 
 //                             wireframe 
 //                         />
-//                     </Sphere>
+//                     </mesh>
 //                 </group>
 //             )}
 //             {hasMagnet && (
@@ -453,9 +470,10 @@
     
 //     useFrame((state, delta) => {
 //         if (!isBoosting || !groupRef.current) return;
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
 //         const children = groupRef.current.children;
 //         for (let i = 0; i < children.length; i++) {
-//             children[i].position.z += 120 * delta * lines[i].speed;
+//             children[i].position.z += 120 * safeDelta * lines[i].speed;
 //             if (children[i].position.z > 15) children[i].position.z = -50;
 //         }
 //     });
@@ -493,7 +511,7 @@
 
 //     useFrame((state, delta) => {
 //         if (!particlesRef.current) return;
-//         const safeDelta = Math.min(delta, 0.1); // 렉 방지용 클램핑
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
 //         particlesRef.current.children.forEach((particle, i) => {
 //             const data = particles[i];
 //             particle.position.z += speed * 50 * safeDelta * data.speed;
@@ -531,7 +549,7 @@
     
 //     useFrame((state, delta) => {
 //         if (!groupRef.current) return;
-//         const safeDelta = Math.min(delta, 0.1);
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
 //         const moveAmount = speed * 55 * safeDelta;
 //         const children = groupRef.current.children;
         
@@ -563,7 +581,7 @@
 //     const themeConfig = MAP_THEMES[theme];
     
 //     useFrame((state, delta) => {
-//         const safeDelta = Math.min(delta, 0.1);
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
 //         const moveAmount = speed * 55 * safeDelta;
         
 //         if (linesRef.current) { 
@@ -635,12 +653,13 @@
     
 //     useFrame((state, delta) => {
 //         if (!groupRef.current) return;
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
 //         const children = groupRef.current.children;
 //         for (let i = 0; i < children.length - 1; i++) {
 //             const p = particles[i];
-//             children[i].position.add(p.direction.clone().multiplyScalar(p.speed * delta));
-//             children[i].rotation.x += delta * 4;
-//             p.direction.y -= delta * 2.5;
+//             children[i].position.add(p.direction.clone().multiplyScalar(p.speed * safeDelta));
+//             children[i].rotation.x += safeDelta * 4;
+//             p.direction.y -= safeDelta * 2.5;
 //         }
 //     });
     
@@ -663,6 +682,7 @@
 //     const shakeOffset = useRef({ x: 0, y: 0 });
     
 //     useFrame((state, delta) => {
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
 //         const isMobile = size.width < 768;
 //         const baseZ = isMobile ? 24 : 16;
 //         const baseY = isMobile ? 11 : 9;
@@ -678,11 +698,11 @@
 //             targetFov = 68; 
 //             targetY = baseY - 0.4; 
 //             targetZ = baseZ - 1.5; 
-//             shakeOffset.current.x = THREE.MathUtils.lerp(shakeOffset.current.x, 0, delta * 4); 
-//             shakeOffset.current.y = THREE.MathUtils.lerp(shakeOffset.current.y, 0, delta * 4); 
+//             shakeOffset.current.x = THREE.MathUtils.lerp(shakeOffset.current.x, 0, safeDelta * 4); 
+//             shakeOffset.current.y = THREE.MathUtils.lerp(shakeOffset.current.y, 0, safeDelta * 4); 
 //         } else { 
-//             shakeOffset.current.x = THREE.MathUtils.lerp(shakeOffset.current.x, 0, delta * 6); 
-//             shakeOffset.current.y = THREE.MathUtils.lerp(shakeOffset.current.y, 0, delta * 6); 
+//             shakeOffset.current.x = THREE.MathUtils.lerp(shakeOffset.current.x, 0, safeDelta * 6); 
+//             shakeOffset.current.y = THREE.MathUtils.lerp(shakeOffset.current.y, 0, safeDelta * 6); 
 //         }
         
 //         if (isCrashed) { 
@@ -691,10 +711,10 @@
 //             targetFov = 50; 
 //         }
         
-//         camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, delta * 2.5);
-//         camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, delta * 2.5);
-//         camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, delta * 2.5);
-//         camera.position.x = THREE.MathUtils.lerp(camera.position.x, shakeOffset.current.x, delta * 8);
+//         camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, safeDelta * 2.5);
+//         camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, safeDelta * 2.5);
+//         camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, safeDelta * 2.5);
+//         camera.position.x = THREE.MathUtils.lerp(camera.position.x, shakeOffset.current.x, safeDelta * 8);
 //         camera.lookAt(0, shakeOffset.current.y, -25);
 //         camera.updateProjectionMatrix();
 //     });
@@ -702,16 +722,15 @@
 //     return null;
 // });
 
-// // ==================== 🎮 WORLD CONTROLLER (풀링 + 최적화 적용) ====================
+// // ==================== 🎮 WORLD CONTROLLER (렉 제거 + 부스터 버그 수정) ====================
 // const WorldController = ({
 //     isPlaying, laneIndex, isBoosting, isRecovering, hasMagnet, hasShield, isSlowMotion, doublePoints,
 //     onCrash, onCoin, onBoost, onMagnet, onShield, onSlowMotion, onDoublePoints,
 //     setScore, setSpeedDisplay, setCombo, removeShield,
 //     theme, audioManager
 // }) => {
-//     // 🔥 Object Pooling Refs
 //     const poolRefs = useRef([]); 
-//     const poolData = useRef([]); // { active: bool, lane: int, z: float, type: string }
+//     const poolData = useRef([]); 
     
 //     const spawnTimer = useRef(0);
 //     const speedRef = useRef(CONFIG.START_SPEED);
@@ -719,22 +738,25 @@
 //     const comboRef = useRef(0);
 //     const comboTimer = useRef(0);
 //     const frameCount = useRef(0);
+    
+//     // 🔥 수집된 아이템 추적 (중복 방지)
+//     const collectedItems = useRef(new Set());
 
-//     // 풀 초기화
 //     useEffect(() => {
 //         poolData.current = Array.from({ length: CONFIG.POOL_SIZE }, () => ({
 //             active: false,
 //             lane: 0,
 //             z: 0,
-//             type: null
+//             type: null,
+//             id: Math.random() // 🔥 고유 ID
 //         }));
 //     }, []);
 
 //     useEffect(() => {
 //         if (isPlaying) {
-//             // 게임 시작 시 풀 및 상태 초기화
 //             poolData.current.forEach((item, i) => {
 //                 item.active = false;
+//                 item.id = Math.random(); // 🔥 ID 재생성
 //                 if(poolRefs.current[i]) poolRefs.current[i].deactivate();
 //             });
 //             spawnTimer.current = 0;
@@ -742,6 +764,7 @@
 //             scoreAcc.current = 0;
 //             comboRef.current = 0;
 //             comboTimer.current = 0;
+//             collectedItems.current.clear(); // 🔥 클리어
 //             audioManager.startEngine();
 //         } else {
 //             audioManager.stopEngine();
@@ -751,8 +774,7 @@
 //     useFrame((state, delta) => {
 //         if (!isPlaying) return;
 
-//         // 렉 방지용 Delta Clamping (0.1초 이상 튀면 0.1초로 고정)
-//         const safeDelta = Math.min(delta, 0.1);
+//         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA); // 🔥 렉 방지
 //         const timeScale = isSlowMotion ? 0.5 : 1.0;
 //         const effectiveDelta = safeDelta * timeScale;
 
@@ -774,9 +796,9 @@
 //         const pointBonus = doublePoints ? 2 : 1;
 //         scoreAcc.current += speedRef.current * 55 * effectiveDelta * speedBonus * pointBonus;
 
-//         // UI 업데이트 스로틀링
+//         // UI 업데이트 (30프레임마다)
 //         frameCount.current += 1;
-//         if (frameCount.current % 15 === 0) {
+//         if (frameCount.current % 30 === 0) {
 //             setScore(Math.floor(scoreAcc.current));
 //             setSpeedDisplay(Math.floor(speedRef.current * 200));
 //         }
@@ -789,7 +811,6 @@
 //             const rand = Math.random();
 
 //             const spawnObject = (lane, type) => {
-//                 // 빈 풀 찾기
 //                 const index = poolData.current.findIndex(p => !p.active);
 //                 if (index !== -1) {
 //                     const obj = poolData.current[index];
@@ -797,7 +818,7 @@
 //                     obj.lane = lane;
 //                     obj.z = z;
 //                     obj.type = type;
-//                     // Ref를 통해 실제 3D 객체 활성화
+//                     obj.id = Math.random(); // 🔥 새 ID 할당
 //                     const laneX = LANES[lane];
 //                     if(poolRefs.current[index]) {
 //                         poolRefs.current[index].activate(type, laneX, z);
@@ -838,28 +859,32 @@
 
 //             obj.z += moveDist;
 
-//             // 마그넷
+//             // 마그넷 (부드럽게)
 //             if (hasMagnet && obj.type === 'coin' && obj.z > -15 && obj.z < 5) {
 //                 const laneDiff = laneIndex - obj.lane;
 //                 if (Math.abs(laneDiff) < 2.5) {
-//                     obj.lane += Math.sign(laneDiff) * Math.min(Math.abs(laneDiff), effectiveDelta * 7);
+//                     obj.lane += Math.sign(laneDiff) * Math.min(Math.abs(laneDiff), effectiveDelta * 8); // 🔥 더 강하게
 //                 }
 //             }
 
-//             // 시각적 위치 업데이트 (React State 안씀 -> 렉 없음)
+//             // 시각적 위치 업데이트
 //             if (poolRefs.current[i]) {
+//                 poolRefs.current[i].updatePosition(obj.z);
+                
+//                 // X축 업데이트 (마그넷용)
 //                 const x = typeof obj.lane === 'number' && Number.isInteger(obj.lane)
 //                         ? LANES[obj.lane]
 //                         : LANES[Math.floor(obj.lane)] + (obj.lane % 1) * CONFIG.LANE_WIDTH;
-//                 poolRefs.current[i].updatePosition(obj.z);
-//                 // 마그넷 등으로 X축 이동 시 위치 갱신이 필요하다면 아래처럼
-//                 poolRefs.current[i].getPosition().x = x; 
+//                 poolRefs.current[i].setX(x);
 //             }
 
-//             // 충돌 체크
+//             // 🔥 충돌 체크 (ID 기반 중복 방지)
 //             if (obj.z > -1.5 && obj.z < 1.5) {
 //                 const laneDiff = Math.abs(LANES[Math.round(obj.lane)] - LANES[laneIndex]);
-//                 if (laneDiff < 0.75) {
+                
+//                 if (laneDiff < 0.75 && !collectedItems.current.has(obj.id)) { // 🔥 ID 체크
+//                     collectedItems.current.add(obj.id); // 🔥 수집 기록
+                    
 //                     if (obj.type === 'barrier' || obj.type === 'drum') {
 //                         if (isInvincible) {
 //                             obj.active = false;
@@ -882,31 +907,37 @@
                         
 //                         if (obj.type === 'coin') {
 //                             const comboBonus = Math.min(comboRef.current * 10, 100);
-//                             onCoin((50 + comboBonus) * pointBonus); 
+//                             onCoin((50 + comboBonus) * (doublePoints ? 2 : 1)); 
 //                             audioManager.playSound('coin');
 //                             comboRef.current++; 
 //                             comboTimer.current = 2.5; 
 //                             setCombo(comboRef.current);
 //                             if (comboRef.current > 1) audioManager.playSound('combo');
 //                         } else if (obj.type === 'magnet') { 
-//                             onMagnet(); audioManager.playSound('coin'); 
+//                             onMagnet(); 
+//                             audioManager.playSound('coin'); 
 //                         } else if (obj.type === 'boost') { 
-//                             onBoost(); audioManager.playSound('boost'); 
+//                             onBoost(); // 🔥 부스터 중에도 획득 가능 (버그 수정)
+//                             audioManager.playSound('boost'); 
 //                         } else if (obj.type === 'shield') {
-//                             onShield(); audioManager.playSound('shield');
+//                             onShield(); 
+//                             audioManager.playSound('shield');
 //                         } else if (obj.type === 'slowmotion') {
-//                             onSlowMotion(); audioManager.playSound('coin');
+//                             onSlowMotion(); 
+//                             audioManager.playSound('coin');
 //                         } else if (obj.type === 'doublepoints') {
-//                             onDoublePoints(); audioManager.playSound('coin');
+//                             onDoublePoints(); 
+//                             audioManager.playSound('coin');
 //                         }
 //                     }
 //                 }
 //             }
             
-//             // 화면 밖으로 나가면 비활성화 (풀 반환)
+//             // 화면 밖 비활성화
 //             if (obj.z > 12) {
 //                 obj.active = false;
 //                 if(poolRefs.current[i]) poolRefs.current[i].deactivate();
+//                 collectedItems.current.delete(obj.id); // 🔥 수집 기록 삭제
 //             }
 //         }
 //     });
@@ -918,7 +949,6 @@
 //             <ThemeParticles theme={theme} speed={speedRef.current} />
 //             <SpeedLines isBoosting={isBoosting} theme={theme} />
             
-//             {/* 🔥 Object Pool Render */}
 //             {Array.from({ length: CONFIG.POOL_SIZE }).map((_, i) => (
 //                 <PooledGameEntity key={i} ref={el => poolRefs.current[i] = el} />
 //             ))}
@@ -981,7 +1011,6 @@
 //             )}
 //             {isPlaying && !isGameOver && (
 //                 <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '100%', display: 'flex', pointerEvents: 'auto' }}>
-//                     {/* 🔥 onPointerDown 하나로 통합하고 preventDefault로 중복 방지 */}
 //                     <div style={{ flex: 1, background: touchIndicator === 'left' ? 'rgba(255,255,255,0.1)' : 'transparent', transition: 'background 0.1s', borderRight: '1px solid rgba(255,255,255,0.1)' }} onPointerDown={(e) => handleMove('left', e)} />
 //                     <div style={{ flex: 1, background: touchIndicator === 'right' ? 'rgba(255,255,255,0.1)' : 'transparent', transition: 'background 0.1s', borderLeft: '1px solid rgba(255,255,255,0.1)' }} onPointerDown={(e) => handleMove('right', e)} />
 //                 </div>
@@ -1047,7 +1076,6 @@
 //     const user = auth.currentUser;
 //     const prevBoostTime = useRef(0);
 
-//     // ⭐ [수정] 페이지 로드 시 상단 스크롤
 //     useEffect(() => { 
 //         window.scrollTo(0, 0); 
 //         if (!user) navigate('/login'); 
@@ -1127,7 +1155,6 @@
 //     const handleStart = async () => {
 //         if (window.navigator.vibrate) window.navigator.vibrate(200);
         
-//         // ⭐ [수정] 돈 부족 시 시작 불가 로직
 //         try { 
 //             const userRef = doc(db, 'users', user.uid);
 //             const userSnap = await getDoc(userRef);
@@ -1135,7 +1162,7 @@
 
 //             if (currentPoint < CONFIG.PLAY_COST) {
 //                 alert(`포인트가 부족합니다! (보유: ${currentPoint.toLocaleString()}P, 필요: ${CONFIG.PLAY_COST.toLocaleString()}P)`);
-//                 return; // 시작 중단
+//                 return;
 //             }
 
 //             await updateDoc(userRef, { point: increment(-CONFIG.PLAY_COST) });
@@ -1310,8 +1337,8 @@ const CONFIG = {
     ITEM_SPAWN_RATE: 0.30,
     BASE_SPAWN_INTERVAL: 1.4,
     MIN_SPAWN_INTERVAL: 0.4,
-    POOL_SIZE: 80, // 🔥 증가
-    MAX_DELTA: 0.033, // 🔥 30fps 이하 방지
+    POOL_SIZE: 80,
+    MAX_DELTA: 0.033,
 };
 
 const LANES = Array.from({ length: CONFIG.LANE_COUNT }, (_, i) => 
@@ -1325,8 +1352,8 @@ class AudioManager {
         this.engineOsc = null;
         this.engineGain = null;
         this.isMuted = false;
-        this.soundQueue = []; // 🔥 사운드 큐
-        this.lastSoundTime = {}; // 🔥 디바운싱
+        this.soundQueue = [];
+        this.lastSoundTime = {};
     }
 
     init() {
@@ -1377,7 +1404,6 @@ class AudioManager {
         this.init();
         if (this.isMuted) return;
 
-        // 🔥 디바운싱: 같은 사운드 0.05초 내 중복 방지
         const now = performance.now();
         if (this.lastSoundTime[type] && now - this.lastSoundTime[type] < 50) return;
         this.lastSoundTime[type] = now;
@@ -1489,14 +1515,14 @@ const fetchLeaderboard = async () => {
 // ==================== 🚙 POOLED OBJECT COMPONENT ====================
 const PooledGameEntity = forwardRef((props, ref) => {
     const groupRef = useRef();
-    const meshRef = useRef(); // 🔥 메쉬 직접 참조
-    const stateRef = useRef({ type: null, visible: false, rotationSpeed: 0 }); // 🔥 State 대신 Ref
+    const meshRef = useRef();
+    const stateRef = useRef({ type: null, visible: false, rotationSpeed: 0 });
 
     useImperativeHandle(ref, () => ({
         activate: (newType, x, z) => {
             stateRef.current.type = newType;
             stateRef.current.visible = true;
-            stateRef.current.rotationSpeed = 0.03 + Math.random() * 0.02; // 🔥 랜덤 회전속도
+            stateRef.current.rotationSpeed = 0.03 + Math.random() * 0.02;
             if (groupRef.current) {
                 groupRef.current.position.set(x, 0, z);
                 groupRef.current.visible = true;
@@ -1517,7 +1543,6 @@ const PooledGameEntity = forwardRef((props, ref) => {
         getType: () => stateRef.current.type
     }));
 
-    // 🔥 애니메이션 최적화: visible일 때만 회전
     useFrame(() => {
         if (!stateRef.current.visible || !meshRef.current) return;
         const type = stateRef.current.type;
@@ -1652,7 +1677,6 @@ const SuperCar = memo(({ laneIndex, isBoosting, isRecovering, hasMagnet, hasShie
         const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
         const targetX = LANES[laneIndex];
         
-        // 🔥 더 부드러운 이동
         currentX.current = THREE.MathUtils.lerp(currentX.current, targetX, 18 * safeDelta);
 
         if (meshRef.current) {
@@ -1777,45 +1801,6 @@ const SpeedLines = memo(({ isBoosting, theme }) => {
                 <mesh key={i} position={[line.x, line.y, line.z]} rotation={[Math.PI / 2, 0, 0]}>
                     <cylinderGeometry args={[0.03, 0.03, line.length, 6]} />
                     <meshBasicMaterial color={MAP_THEMES[theme]?.light || '#ffffff'} transparent opacity={0.35} />
-                </mesh>
-            ))}
-        </group>
-    );
-});
-
-// ==================== 🌲 THEME PARTICLES ====================
-const ThemeParticles = memo(({ theme, speed }) => {
-    const particlesRef = useRef();
-    const particles = useMemo(() => {
-        const count = 60;
-        const positions = [];
-        for (let i = 0; i < count; i++) {
-            positions.push({ 
-                x: (Math.random() - 0.5) * 50, 
-                y: Math.random() * 20 + 2, 
-                z: Math.random() * 150 - 100, 
-                speed: 0.5 + Math.random() * 1.5 
-            });
-        }
-        return positions;
-    }, []);
-
-    useFrame((state, delta) => {
-        if (!particlesRef.current) return;
-        const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
-        particlesRef.current.children.forEach((particle, i) => {
-            const data = particles[i];
-            particle.position.z += speed * 50 * safeDelta * data.speed;
-            if (particle.position.z > 20) particle.position.z = -100;
-        });
-    });
-
-    return (
-        <group ref={particlesRef}>
-            {particles.map((p, i) => (
-                <mesh key={i} position={[p.x, p.y, p.z]}>
-                    <sphereGeometry args={[0.08, 8, 8]} />
-                    <meshBasicMaterial color={MAP_THEMES[theme].accent} transparent opacity={0.6} />
                 </mesh>
             ))}
         </group>
@@ -2013,7 +1998,7 @@ const DynamicCamera = memo(({ isBoosting, isRecovering, isCrashed }) => {
     return null;
 });
 
-// ==================== 🎮 WORLD CONTROLLER (렉 제거 + 부스터 버그 수정) ====================
+// ==================== 🎮 WORLD CONTROLLER ====================
 const WorldController = ({
     isPlaying, laneIndex, isBoosting, isRecovering, hasMagnet, hasShield, isSlowMotion, doublePoints,
     onCrash, onCoin, onBoost, onMagnet, onShield, onSlowMotion, onDoublePoints,
@@ -2030,7 +2015,6 @@ const WorldController = ({
     const comboTimer = useRef(0);
     const frameCount = useRef(0);
     
-    // 🔥 수집된 아이템 추적 (중복 방지)
     const collectedItems = useRef(new Set());
 
     useEffect(() => {
@@ -2039,7 +2023,7 @@ const WorldController = ({
             lane: 0,
             z: 0,
             type: null,
-            id: Math.random() // 🔥 고유 ID
+            id: Math.random()
         }));
     }, []);
 
@@ -2047,7 +2031,7 @@ const WorldController = ({
         if (isPlaying) {
             poolData.current.forEach((item, i) => {
                 item.active = false;
-                item.id = Math.random(); // 🔥 ID 재생성
+                item.id = Math.random();
                 if(poolRefs.current[i]) poolRefs.current[i].deactivate();
             });
             spawnTimer.current = 0;
@@ -2055,7 +2039,7 @@ const WorldController = ({
             scoreAcc.current = 0;
             comboRef.current = 0;
             comboTimer.current = 0;
-            collectedItems.current.clear(); // 🔥 클리어
+            collectedItems.current.clear();
             audioManager.startEngine();
         } else {
             audioManager.stopEngine();
@@ -2065,11 +2049,10 @@ const WorldController = ({
     useFrame((state, delta) => {
         if (!isPlaying) return;
 
-        const safeDelta = Math.min(delta, CONFIG.MAX_DELTA); // 🔥 렉 방지
+        const safeDelta = Math.min(delta, CONFIG.MAX_DELTA);
         const timeScale = isSlowMotion ? 0.5 : 1.0;
         const effectiveDelta = safeDelta * timeScale;
 
-        // 속도 계산
         let baseSpeed = CONFIG.START_SPEED + (scoreAcc.current * 0.00005);
         if (baseSpeed > CONFIG.MAX_SPEED) baseSpeed = CONFIG.MAX_SPEED;
         const targetSpeed = isBoosting ? baseSpeed * CONFIG.BOOST_MULTIPLIER : baseSpeed;
@@ -2078,23 +2061,20 @@ const WorldController = ({
         
         audioManager.updateEngine(speedRef.current, isBoosting);
 
-        // 콤보 타이머
         if (comboTimer.current > 0) comboTimer.current -= effectiveDelta;
         else if (comboRef.current > 0) { comboRef.current = 0; setCombo(0); }
 
-        // 점수
         const speedBonus = isBoosting ? 1.5 : 1;
         const pointBonus = doublePoints ? 2 : 1;
         scoreAcc.current += speedRef.current * 55 * effectiveDelta * speedBonus * pointBonus;
 
-        // UI 업데이트 (30프레임마다)
         frameCount.current += 1;
         if (frameCount.current % 30 === 0) {
             setScore(Math.floor(scoreAcc.current));
             setSpeedDisplay(Math.floor(speedRef.current * 200));
         }
 
-        // 스폰 로직
+        // 🔥 스폰 로직: 장애물 1개만 생성
         spawnTimer.current -= effectiveDelta * speedRef.current;
         if (spawnTimer.current <= 0) {
             spawnTimer.current = Math.max(CONFIG.MIN_SPAWN_INTERVAL, CONFIG.BASE_SPAWN_INTERVAL - (scoreAcc.current * 0.00012));
@@ -2109,7 +2089,7 @@ const WorldController = ({
                     obj.lane = lane;
                     obj.z = z;
                     obj.type = type;
-                    obj.id = Math.random(); // 🔥 새 ID 할당
+                    obj.id = Math.random();
                     const laneX = LANES[lane];
                     if(poolRefs.current[index]) {
                         poolRefs.current[index].activate(type, laneX, z);
@@ -2128,7 +2108,8 @@ const WorldController = ({
                 else if (itemRand < 0.35) type = 'boost';
                 spawnObject(lane, type);
             } else {
-                const count = Math.min(Math.floor(Math.random() * 3) + 1, CONFIG.LANE_COUNT - 1);
+                // 🔥 장애물 랜덤 1-2개 생성
+                const count = Math.floor(Math.random() * 2) + 1; // 1 or 2
                 const lanes = [];
                 while (lanes.length < count) {
                     const l = Math.floor(Math.random() * CONFIG.LANE_COUNT);
@@ -2143,38 +2124,37 @@ const WorldController = ({
         const moveDist = speedRef.current * 55 * effectiveDelta;
         const isInvincible = isBoosting || isRecovering;
 
-        // 풀 데이터 업데이트 및 충돌 처리
         for (let i = 0; i < CONFIG.POOL_SIZE; i++) {
             const obj = poolData.current[i];
             if (!obj.active) continue;
 
             obj.z += moveDist;
 
-            // 마그넷 (부드럽게)
-            if (hasMagnet && obj.type === 'coin' && obj.z > -15 && obj.z < 5) {
-                const laneDiff = laneIndex - obj.lane;
-                if (Math.abs(laneDiff) < 2.5) {
-                    obj.lane += Math.sign(laneDiff) * Math.min(Math.abs(laneDiff), effectiveDelta * 8); // 🔥 더 강하게
+            // 🔥 마그넷: 범위 증가 + 모든 아이템 수집 가능
+            if (hasMagnet && obj.z > -20 && obj.z < 5) {
+                const isItem = ['coin', 'boost', 'shield', 'magnet', 'slowmotion', 'doublepoints'].includes(obj.type);
+                if (isItem) {
+                    const laneDiff = laneIndex - obj.lane;
+                    if (Math.abs(laneDiff) < 3.5) { // 🔥 범위 증가 (2.5 → 3.5)
+                        obj.lane += Math.sign(laneDiff) * Math.min(Math.abs(laneDiff), effectiveDelta * 12); // 🔥 더 강력한 흡입력
+                    }
                 }
             }
 
-            // 시각적 위치 업데이트
             if (poolRefs.current[i]) {
                 poolRefs.current[i].updatePosition(obj.z);
                 
-                // X축 업데이트 (마그넷용)
                 const x = typeof obj.lane === 'number' && Number.isInteger(obj.lane)
                         ? LANES[obj.lane]
                         : LANES[Math.floor(obj.lane)] + (obj.lane % 1) * CONFIG.LANE_WIDTH;
                 poolRefs.current[i].setX(x);
             }
 
-            // 🔥 충돌 체크 (ID 기반 중복 방지)
             if (obj.z > -1.5 && obj.z < 1.5) {
                 const laneDiff = Math.abs(LANES[Math.round(obj.lane)] - LANES[laneIndex]);
                 
-                if (laneDiff < 0.75 && !collectedItems.current.has(obj.id)) { // 🔥 ID 체크
-                    collectedItems.current.add(obj.id); // 🔥 수집 기록
+                if (laneDiff < 0.75 && !collectedItems.current.has(obj.id)) {
+                    collectedItems.current.add(obj.id);
                     
                     if (obj.type === 'barrier' || obj.type === 'drum') {
                         if (isInvincible) {
@@ -2192,7 +2172,6 @@ const WorldController = ({
                             onCrash();
                         }
                     } else {
-                        // 아이템 획득
                         obj.active = false;
                         poolRefs.current[i].deactivate();
                         
@@ -2208,7 +2187,7 @@ const WorldController = ({
                             onMagnet(); 
                             audioManager.playSound('coin'); 
                         } else if (obj.type === 'boost') { 
-                            onBoost(); // 🔥 부스터 중에도 획득 가능 (버그 수정)
+                            onBoost();
                             audioManager.playSound('boost'); 
                         } else if (obj.type === 'shield') {
                             onShield(); 
@@ -2224,11 +2203,10 @@ const WorldController = ({
                 }
             }
             
-            // 화면 밖 비활성화
             if (obj.z > 12) {
                 obj.active = false;
                 if(poolRefs.current[i]) poolRefs.current[i].deactivate();
-                collectedItems.current.delete(obj.id); // 🔥 수집 기록 삭제
+                collectedItems.current.delete(obj.id);
             }
         }
     });
@@ -2237,7 +2215,6 @@ const WorldController = ({
         <group>
             <CyberpunkRoad speed={speedRef.current} theme={theme} />
             <SideScenery speed={speedRef.current} theme={theme} />
-            <ThemeParticles theme={theme} speed={speedRef.current} />
             <SpeedLines isBoosting={isBoosting} theme={theme} />
             
             {Array.from({ length: CONFIG.POOL_SIZE }).map((_, i) => (
@@ -2247,7 +2224,7 @@ const WorldController = ({
     );
 };
 
-// ==================== 🎨 GAME UI ====================
+// ==================== 🎨 GAME UI (터치 이펙트 강화) ====================
 const GameUI = ({ score, speed, combo, isPlaying, isGameOver, onStart, onExit, finalScore, theme, hasMagnet, boostTime, isRecovering, hasShield, isSlowMotion, doublePoints, touchIndicator }) => {
     const themeConfig = MAP_THEMES[theme];
     
@@ -2300,10 +2277,23 @@ const GameUI = ({ score, speed, combo, isPlaying, isGameOver, onStart, onExit, f
                     <button onClick={onExit} style={{ marginTop: '25px', background: 'none', border: 'none', color: '#888', fontSize: 'clamp(0.9rem, 3.5vw, 1.1rem)', textDecoration: 'underline', cursor: 'pointer', transition: 'color 0.3s' }} onMouseEnter={(e) => (e.target.style.color = '#fff')} onMouseLeave={(e) => (e.target.style.color = '#888')}>← EXIT GAME</button>
                 </div>
             )}
+            {/* 터치 영역 */}
             {isPlaying && !isGameOver && (
                 <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '100%', display: 'flex', pointerEvents: 'auto' }}>
-                    <div style={{ flex: 1, background: touchIndicator === 'left' ? 'rgba(255,255,255,0.1)' : 'transparent', transition: 'background 0.1s', borderRight: '1px solid rgba(255,255,255,0.1)' }} onPointerDown={(e) => handleMove('left', e)} />
-                    <div style={{ flex: 1, background: touchIndicator === 'right' ? 'rgba(255,255,255,0.1)' : 'transparent', transition: 'background 0.1s', borderLeft: '1px solid rgba(255,255,255,0.1)' }} onPointerDown={(e) => handleMove('right', e)} />
+                    <div 
+                        style={{ 
+                            flex: 1, 
+                            borderRight: '1px solid rgba(255,255,255,0.05)'
+                        }} 
+                        onPointerDown={(e) => handleMove('left', e)}
+                    />
+                    <div 
+                        style={{ 
+                            flex: 1, 
+                            borderLeft: '1px solid rgba(255,255,255,0.05)'
+                        }} 
+                        onPointerDown={(e) => handleMove('right', e)}
+                    />
                 </div>
             )}
         </div>
@@ -2406,12 +2396,12 @@ export default function HighwayGame() {
             if (e.key === 'ArrowLeft') {
                 setLane((l) => Math.max(0, l - 1));
                 audioManager.playSound('move');
-                setTouchIndicator('left'); setTimeout(() => setTouchIndicator(null), 100);
+                setTouchIndicator('left'); setTimeout(() => setTouchIndicator(null), 300);
             }
             if (e.key === 'ArrowRight') {
                 setLane((l) => Math.min(CONFIG.LANE_COUNT - 1, l + 1));
                 audioManager.playSound('move');
-                setTouchIndicator('right'); setTimeout(() => setTouchIndicator(null), 100);
+                setTouchIndicator('right'); setTimeout(() => setTouchIndicator(null), 300);
             }
         };
 
@@ -2423,7 +2413,7 @@ export default function HighwayGame() {
             
             audioManager.playSound('move');
             setTouchIndicator(dir); 
-            setTimeout(() => setTouchIndicator(null), 100);
+            setTimeout(() => setTouchIndicator(null), 300);
             if (window.navigator.vibrate) window.navigator.vibrate(50);
         };
         
@@ -2438,7 +2428,10 @@ export default function HighwayGame() {
     useEffect(() => { if (boostTime > 0) { const timer = setTimeout(() => setBoostTime((time) => Math.max(0, time - 0.1)), 100); return () => clearTimeout(timer); } }, [boostTime]);
     useEffect(() => { if (prevBoostTime.current > 0 && boostTime <= 0 && isPlaying) setIsRecovering(true); prevBoostTime.current = boostTime; }, [boostTime, isPlaying]);
     useEffect(() => { if (isRecovering) { const timer = setTimeout(() => setIsRecovering(false), 2000); return () => clearTimeout(timer); } }, [isRecovering]);
+    
+    // 🔥 마그넷 중첩 방지: setMagnetTime 대신 고정값 설정
     useEffect(() => { if (magnetTime > 0) { const timer = setTimeout(() => setMagnetTime((time) => Math.max(0, time - 0.1)), 100); return () => clearTimeout(timer); } }, [magnetTime]);
+    
     useEffect(() => { if (slowMotionTime > 0) { const timer = setTimeout(() => setSlowMotionTime((time) => Math.max(0, time - 0.1)), 100); return () => clearTimeout(timer); } }, [slowMotionTime]);
     useEffect(() => { if (doublePointsTime > 0) { const timer = setTimeout(() => setDoublePointsTime((time) => Math.max(0, time - 0.1)), 100); return () => clearTimeout(timer); } }, [doublePointsTime]);
     useEffect(() => { audioManager.setMuted(isMuted); }, [isMuted]);
@@ -2582,8 +2575,17 @@ export default function HighwayGame() {
                             setCombo={setCombo} 
                             onCrash={handleGameOver} 
                             onCoin={() => {}} 
-                            onBoost={() => { setBoostTime((prev) => prev + 3.5); if (window.navigator.vibrate) window.navigator.vibrate(200); }} 
-                            onMagnet={() => { setMagnetTime((prev) => prev + 6.0); if (window.navigator.vibrate) window.navigator.vibrate(100); }} 
+                            onBoost={() => { 
+                                setBoostTime((prev) => prev + 3.5); 
+                                if (window.navigator.vibrate) window.navigator.vibrate(200); 
+                            }} 
+                            onMagnet={() => { 
+                                // 🔥 마그넷 중첩 방지: 이미 활성화되어 있으면 무시
+                                if (magnetTime <= 0) {
+                                    setMagnetTime(6.0);
+                                    if (window.navigator.vibrate) window.navigator.vibrate(100);
+                                }
+                            }} 
                             onShield={() => { setShieldActive(true); if (window.navigator.vibrate) window.navigator.vibrate(100); }}
                             onSlowMotion={() => { setSlowMotionTime((prev) => prev + 5.0); if (window.navigator.vibrate) window.navigator.vibrate(100); }}
                             onDoublePoints={() => { setDoublePointsTime((prev) => prev + 7.0); if (window.navigator.vibrate) window.navigator.vibrate(100); }}
@@ -2602,7 +2604,10 @@ export default function HighwayGame() {
             </div>
             <LeaderBoard ranks={ranks} theme={theme} />
             <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
-            <style>{`@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } } @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }`}</style>
+            <style>{`
+                @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } } 
+                @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+            `}</style>
         </div>
     );
 }
