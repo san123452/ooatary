@@ -399,7 +399,7 @@ export default function Board() {
               {t.bd_tab_humor || "🤣 유머"}
           </div>
           <div onClick={() => setCategory('yoon')} style={tabStyle(category === 'yoon')}>
-              {t.bd_tab_yoon || "👑 윤갤"}
+              {t.bd_tab_yoon || "🔞 윤갤"}
           </div>
       </div>
 
@@ -424,19 +424,20 @@ export default function Board() {
                   {post.isNotice && <span style={{fontSize:12, background:'#f1c40f', color:'black', padding:'2px 6px', borderRadius:4}}>{t.bd_notice}</span>}
                   {post.isHot && <span style={{fontSize:12, background:'#e74c3c', color:'white', padding:'2px 6px', borderRadius:4}}>{t.bd_hot}</span>}
                   
-                  {post.imageUrl && (
-                    youtubeId ? <span title="동영상">🎥</span> : <span title="이미지">🖼️</span>
-                  )}
+                  {/* 🔥 [수정된 부분] 아이콘 표시 로직 */}
+                  {youtubeId && <span title="동영상">🎥</span>}
+                  {post.imageUrl && !youtubeId && <span title="이미지">🖼️</span>}
+                  {post.instagramUrl && <span title="인스타그램">🎇</span>}
                   
                   <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{post.title}</span>
               </div>
 
               <div style={{ fontSize: '13px', color: '#bdc3c7', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                {/* 🔥 [수정] 칭호가 있으면 색상 적용해서 보여주기 */}
+                {/* 칭호 표시 */}
                 <span> 
                     {post.authorTitle && (
                         <span style={{ 
-                            color: post.authorTitleColor || '#e74c3c', // 색상 없으면 기본 빨강
+                            color: post.authorTitleColor || '#e74c3c', 
                             fontWeight: 'bold', 
                             marginRight: '4px' 
                         }}>

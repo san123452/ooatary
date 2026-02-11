@@ -1,3 +1,5 @@
+
+
 // import React, { useEffect, useState } from 'react';
 // import { db, auth } from '../firebase';
 // import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
@@ -200,7 +202,7 @@
 //             </div>
 //         )}
 
-//         {/* 🔥 [수정] 게임 버튼 디자인 통일 */}
+//         {/* 🔥 GAME ZONE */}
 //         <div className="card" style={{
 //           background: '#34495e',
 //           border: '2px solid #f1c40f',
@@ -218,10 +220,40 @@
 //           </div>
 
 //           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: 15 }}>
-//             {/* 메인 대형 버튼 */}
-//             <button className="btn" style={{ background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', padding: '20px', borderRadius: '10px', gridColumn: 'span 2', fontSize: '18px', fontWeight:'bold', border: '1px solid rgba(255,255,255,0.2)', color:'white', cursor:'pointer' }} onClick={() => navigate('/gamelobby')}>{t.pvp}</button>
-//             <button className="btn" style={{ background: '#b6cf26', padding: '15px', borderRadius: '10px', fontSize: '16px', gridColumn: 'span 2', fontWeight:'bold', border:'none', color:'#2c3e50', cursor:'pointer' }} onClick={() => navigate('/board')}>{t.cafe}</button>
             
+//             {/* 🔥 [수정] PVP 버튼 (크기 반으로 줄임) */}
+//             <button className="btn" style={{ 
+//                 background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', 
+//                 padding: '20px', 
+//                 borderRadius: '10px', 
+//                 fontSize: '18px', 
+//                 fontWeight:'bold', 
+//                 border: '1px solid rgba(255,255,255,0.2)', 
+//                 color:'white', 
+//                 cursor:'pointer' 
+//             }} onClick={() => navigate('/gamelobby')}>
+//                 {t.pvp}
+//             </button>
+
+//             {/* 🔥 [추가] TFT 전적 버튼 (PVP 옆에 배치) */}
+//             <button className="btn" style={{ 
+//                 background: 'linear-gradient(135deg, #11b288 0%, #1e272e 100%)', 
+//                 padding: '20px', 
+//                 borderRadius: '10px', 
+//                 fontSize: '18px', 
+//                 fontWeight:'bold', 
+//                 border: '1px solid #11b288', 
+//                 color:'white', 
+//                 cursor:'pointer' 
+//             }} onClick={() => navigate('/board')}>
+//                {t.cafe}
+//             </button>
+// {/* 
+//             <button className="btn" style={{ background: '#b6cf26', padding: '15px',
+//                borderRadius: '10px', fontSize: '16px', gridColumn: 'span 2',
+//                 fontWeight:'bold', border:'none', color:'#2c3e50', 
+//                 cursor:'pointer' }} onClick={() => navigate('/board')}>{t.cafe}</button>
+//              */}
 //             <div style={{ gridColumn: 'span 2', height: '1px', background: '#555', margin: '10px 0' }} />
             
 //             {/* 아케이드 게임 */}
@@ -230,7 +262,8 @@
             
 //             {/* 퍼즐 게임 */}
 //             <GameBtn title={t.g_2048_title || "2048"} color="#bbada0" onClick={() => navigate('/game2048')} />
-//             {/* <GameBtn title={t.g_suika_title || "수박게임"} color="#4CAF50" onClick={() => navigate('/suika')} /> */}
+//             <GameBtn title={t.g_suika_title || "수박게임"} color="#4CAF50" onClick={() => navigate('/suika')} isNew={true} />
+            
 //             <GameBtn title={t.apple} color="#e74c3c" onClick={() => navigate('/apple-single')} />
 //             <GameBtn title={t.ostrich} color="#ff6b6b" onClick={() => navigate('/ostrich')} />
 
@@ -243,6 +276,7 @@
 //             <GameBtn title={t.mines} color="#16a085" onClick={() => navigate('/mines')} />
 //             <GameBtn title={t.graph} color="#9b59b6" onClick={() => navigate('/crash')} />
 //             <GameBtn title={t.highlow} color="#2c3e50" border="#7f8c8d" onClick={() => navigate('/highlow')} />
+//             <GameBtn title={t.g_tetris_title || "🧱 테트리스"} color="#9b59b6" onClick={() => navigate('/tetris')} isNew={true} />
 //           </div>
 //         </div>
 
@@ -260,7 +294,7 @@
 //   );
 // }
 
-// // 버튼 컴포넌트 (통일성 유지)
+// // 버튼 컴포넌트
 // function GameBtn({ title, color, onClick, border, isNew }) {
 //     return (
 //         <button onClick={onClick} style={{ 
@@ -504,9 +538,35 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: 15 }}>
-            <button className="btn" style={{ background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', padding: '20px', borderRadius: '10px', gridColumn: 'span 2', fontSize: '18px', fontWeight:'bold', border: '1px solid rgba(255,255,255,0.2)', color:'white', cursor:'pointer' }} onClick={() => navigate('/gamelobby')}>{t.pvp}</button>
-            <button className="btn" style={{ background: '#b6cf26', padding: '15px', borderRadius: '10px', fontSize: '16px', gridColumn: 'span 2', fontWeight:'bold', border:'none', color:'#2c3e50', cursor:'pointer' }} onClick={() => navigate('/board')}>{t.cafe}</button>
             
+            {/* 🔥 [수정] PVP 버튼 (크기 반으로 줄임) */}
+            <button className="btn" style={{ 
+                background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', 
+                padding: '20px', 
+                borderRadius: '10px', 
+                fontSize: '18px', 
+                fontWeight:'bold', 
+                border: '1px solid rgba(255,255,255,0.2)', 
+                color:'white', 
+                cursor:'pointer' 
+            }} onClick={() => navigate('/gamelobby')}>
+                {t.pvp}
+            </button>
+
+            {/* 🔥 [추가] TFT 전적 버튼 (PVP 옆에 배치) */}
+            <button className="btn" style={{ 
+                background: 'linear-gradient(135deg, #11b288 0%, #1e272e 100%)', 
+                padding: '20px', 
+                borderRadius: '10px', 
+                fontSize: '18px', 
+                fontWeight:'bold', 
+                border: '1px solid #11b288', 
+                color:'white', 
+                cursor:'pointer' 
+            }} onClick={() => navigate('/board')}>
+               {t.cafe}
+            </button>
+
             <div style={{ gridColumn: 'span 2', height: '1px', background: '#555', margin: '10px 0' }} />
             
             {/* 아케이드 게임 */}
@@ -515,7 +575,6 @@ export default function Home() {
             
             {/* 퍼즐 게임 */}
             <GameBtn title={t.g_2048_title || "2048"} color="#bbada0" onClick={() => navigate('/game2048')} />
-            {/* 🔥 [추가] 수박게임 버튼 활성화 */}
             <GameBtn title={t.g_suika_title || "수박게임"} color="#4CAF50" onClick={() => navigate('/suika')} isNew={true} />
             
             <GameBtn title={t.apple} color="#e74c3c" onClick={() => navigate('/apple-single')} />
@@ -530,7 +589,10 @@ export default function Home() {
             <GameBtn title={t.mines} color="#16a085" onClick={() => navigate('/mines')} />
             <GameBtn title={t.graph} color="#9b59b6" onClick={() => navigate('/crash')} />
             <GameBtn title={t.highlow} color="#2c3e50" border="#7f8c8d" onClick={() => navigate('/highlow')} />
-              <GameBtn title={t.g_tetris_title || "🧱 테트리스"} color="#9b59b6" onClick={() => navigate('/tetris')} isNew={true} />
+            <GameBtn title={t.g_tetris_title || "🧱 테트리스"} color="#9b59b6" onClick={() => navigate('/tetris')} isNew={true} />
+            
+            {/* 🔥 비트코인 게임 버튼 추가 */}
+            <GameBtn title="⚡ BitCoin 50x" color="linear-gradient(45deg, #f7931a, #e67e22)" onClick={() => navigate('/bitcoin')} isNew={true} />
           </div>
         </div>
 

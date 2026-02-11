@@ -13,14 +13,12 @@
   
 //   const editData = location.state?.post; 
   
-//   // 📂 초기 카테고리 설정
 //   const initialCategory = location.state?.category || (editData ? editData.category : 'free');
 
 //   const [title, setTitle] = useState(editData ? editData.title : '');
 //   const [content, setContent] = useState(editData ? editData.content : '');
 //   const [imageUrl, setImageUrl] = useState(editData ? editData.imageUrl : ''); 
   
-//   // 📂 카테고리 선택 상태
 //   const [category, setCategory] = useState(initialCategory);
 
 //   const [isNotice, setIsNotice] = useState(editData ? editData.isNotice : false);
@@ -41,7 +39,7 @@
 //     if (!title.trim() || !content.trim()) return alert(t.alertInputAll || "제목과 내용을 입력하세요.");
 //     if (isSubmitting) return; 
 
-//     // 🔥 [추가] 글쓰기 밴 확인 로직 시작
+//     // 🔥 글쓰기 밴 확인 로직
 //     try {
 //         const userSnap = await getDoc(doc(db, "users", user.uid));
 //         if (userSnap.exists()) {
@@ -57,7 +55,6 @@
 //         console.error("Ban check error", e);
 //         return;
 //     }
-//     // 🔥 [추가] 글쓰기 밴 확인 로직 끝
 
 //     setIsSubmitting(true); 
 
@@ -67,7 +64,7 @@
 //       if (editData) {
 //         const postRef = doc(db, "posts", editData.id);
 //         await updateDoc(postRef, {
-//           category, // 수정 시 카테고리 반영
+//           category, 
 //           title, 
 //           content,
 //           imageUrl: finalImageUrl, 
@@ -76,21 +73,30 @@
 //         alert(t.bd_edit_complete || "수정 완료");
 //         navigate(`/board/${editData.id}`);
 //       } else {
+//         // 🔥 [수정] 글 작성 시 칭호와 색상도 같이 가져와서 저장
 //         const userDocRef = doc(db, "users", user.uid);
 //         const userDocSnap = await getDoc(userDocRef);
         
 //         let realName = "User";
+//         let userTitle = "";       // 칭호
+//         let userTitleColor = "";  // 칭호 색상
+
 //         if (userDocSnap.exists()) {
-//             realName = userDocSnap.data().name;
+//             const userData = userDocSnap.data();
+//             realName = userData.name;
+//             userTitle = userData.userTitle || "";           // DB에서 가져옴
+//             userTitleColor = userData.userTitleColor || ""; // DB에서 가져옴
 //         }
 
 //         await addDoc(collection(db, "posts"), {
-//           category, // 저장 시 카테고리 반영
+//           category, 
 //           title, 
 //           content,
 //           imageUrl: finalImageUrl, 
 //           uid: user.uid,
 //           authorName: realName,
+//           authorTitle: userTitle,           // 🔥 칭호 저장
+//           authorTitleColor: userTitleColor, // 🔥 색상 저장
 //           likes: 0, 
 //           likedBy: [], 
 //           commentCount: 0,
@@ -122,7 +128,6 @@
 //     <div className="container" style={{ paddingTop: 30, background: '#1e272e', minHeight: '100vh', color: 'white', padding: '20px' }}>
 //       <h2 style={{ color: '#f1c40f', marginBottom: '20px' }}>{editData ? (t.bd_edit_title || "글 수정") : (t.bd_new_title || "새 글 쓰기")}</h2>
       
-//       {/* 📂 [수정] 카테고리 선택 (번역 적용) */}
 //       <div style={{ marginBottom: 15 }}>
 //           <label style={{ color: '#bdc3c7', fontSize: '14px', marginBottom: 5, display: 'block' }}>
 //               {t.bd_select_board || "게시판 선택"}
@@ -215,8 +220,9 @@
 // }
 
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase'; 
+import { db, auth } from '../firebase'; // 🔥 storage 삭제됨
 import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
+// 🔥 uploadBytes 등 스토리지 함수 삭제됨
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
 
@@ -227,15 +233,16 @@ export default function BoardWrite() {
   const { t } = useLanguage();
   
   const editData = location.state?.post; 
-  
   const initialCategory = location.state?.category || (editData ? editData.category : 'free');
 
   const [title, setTitle] = useState(editData ? editData.title : '');
   const [content, setContent] = useState(editData ? editData.content : '');
+  
+  // 🔥 [수정] 파일 관련 state 다 지우고 URL만 남김
   const [imageUrl, setImageUrl] = useState(editData ? editData.imageUrl : ''); 
   
+  const [instagramUrl, setInstagramUrl] = useState(editData ? editData.instagramUrl : '');
   const [category, setCategory] = useState(initialCategory);
-
   const [isNotice, setIsNotice] = useState(editData ? editData.isNotice : false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -254,7 +261,6 @@ export default function BoardWrite() {
     if (!title.trim() || !content.trim()) return alert(t.alertInputAll || "제목과 내용을 입력하세요.");
     if (isSubmitting) return; 
 
-    // 🔥 글쓰기 밴 확인 로직
     try {
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
@@ -266,56 +272,52 @@ export default function BoardWrite() {
                 }
             }
         }
-    } catch (e) {
-        console.error("Ban check error", e);
-        return;
-    }
+    } catch (e) { console.error("Ban check error", e); return; }
 
     setIsSubmitting(true); 
 
     try {
-      const finalImageUrl = imageUrl.trim(); 
+      // 🔥 [수정] 파일 업로드 로직 삭제 -> 그냥 텍스트 URL만 사용
+      const finalImageUrl = imageUrl.trim();
+
+      const postData = {
+        category, 
+        title, 
+        content,
+        imageUrl: finalImageUrl, 
+        instagramUrl: instagramUrl.trim(),
+        isNotice: isAdmin ? isNotice : false,
+      };
 
       if (editData) {
         const postRef = doc(db, "posts", editData.id);
-        await updateDoc(postRef, {
-          category, 
-          title, 
-          content,
-          imageUrl: finalImageUrl, 
-          isNotice: isAdmin ? isNotice : false,
-        });
+        await updateDoc(postRef, postData);
         alert(t.bd_edit_complete || "수정 완료");
         navigate(`/board/${editData.id}`);
       } else {
-        // 🔥 [수정] 글 작성 시 칭호와 색상도 같이 가져와서 저장
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         
         let realName = "User";
-        let userTitle = "";       // 칭호
-        let userTitleColor = "";  // 칭호 색상
+        let userTitle = "";       
+        let userTitleColor = "";  
 
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             realName = userData.name;
-            userTitle = userData.userTitle || "";           // DB에서 가져옴
-            userTitleColor = userData.userTitleColor || ""; // DB에서 가져옴
+            userTitle = userData.userTitle || "";           
+            userTitleColor = userData.userTitleColor || ""; 
         }
 
         await addDoc(collection(db, "posts"), {
-          category, 
-          title, 
-          content,
-          imageUrl: finalImageUrl, 
+          ...postData,
           uid: user.uid,
           authorName: realName,
-          authorTitle: userTitle,           // 🔥 칭호 저장
-          authorTitleColor: userTitleColor, // 🔥 색상 저장
+          authorTitle: userTitle,           
+          authorTitleColor: userTitleColor, 
           likes: 0, 
           likedBy: [], 
           commentCount: 0,
-          isNotice: isAdmin ? isNotice : false,
           createdAt: serverTimestamp()
         });
         alert(t.alertComplete || "등록 완료");
@@ -376,21 +378,35 @@ export default function BoardWrite() {
       />
 
       <div style={{ marginBottom: 15 }}>
-          <label style={{ display:'block', marginBottom: 5, color:'#ccc', fontSize:'14px' }}>{t.bd_img_url || "📸 이미지 주소 (URL) 또는 유튜브 링크"}</label>
+          <label style={{ display:'block', marginBottom: 5, color:'#ccc', fontSize:'14px' }}>📸 인스타그램 게시물 주소 (선택)</label>
           <input 
             className="input"
             type="text" 
-            placeholder={t.bd_url_ph || "예: https://youtu.be/... 또는 https://site.com/image.jpg"} 
+            placeholder="예: https://www.instagram.com/p/..." 
+            value={instagramUrl}
+            onChange={(e) => setInstagramUrl(e.target.value)}
+            style={{ width: '100%', background: '#2c3e50', color: 'white', border: '1px solid #555', padding: '10px', borderRadius: '5px' }} 
+          />
+      </div>
+
+      {/* 🔥 [수정] 파일 선택기 제거, 단순 URL 입력만 남김 */}
+      <div style={{ marginBottom: 15 }}>
+          <label style={{ display:'block', marginBottom: 5, color:'#ccc', fontSize:'14px' }}>🖼️ 이미지/유튜브 주소 (URL)</label>
+          <input 
+            className="input"
+            type="text" 
+            placeholder={t.bd_url_ph || "예: https://site.com/image.jpg"} 
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            style={{ width: '100%', background: '#2c3e50', color: 'white', border: '1px solid #555', padding: '10px', borderRadius: '5px' }} 
+            style={{ width: '100%', background: '#34495e', color: 'white', border: '1px solid #555', padding: '10px', borderRadius: '5px' }} 
           />
           <p style={{ fontSize: '12px', color: '#7f8c8d', marginTop: '5px' }}>
             {t.bd_url_desc || "* 구글 등에서 '이미지 주소 복사' 후 붙여넣으세요."}
           </p>
       </div>
       
-      {imageUrl && (
+      {/* 미리보기 영역 */}
+      {(imageUrl) && (
           <div style={{ marginBottom: 15, textAlign: 'center', background:'#000', padding:10, borderRadius:10 }}>
             {youtubeId ? (
                 <iframe 
@@ -433,4 +449,3 @@ export default function BoardWrite() {
     </div>
   );
 }
-

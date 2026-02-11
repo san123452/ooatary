@@ -5,28 +5,88 @@
 // import { useNavigate } from 'react-router-dom';
 // import { useLanguage } from '../LanguageContext';
 
-// // 🎨 네온 컬러 팔레트 (선명하게 수정)
-// const TETROMINOS = {
-//   0: { shape: [[0]], color: '0, 0, 0' },
-//   I: { shape: [[0, 'I', 0, 0], [0, 'I', 0, 0], [0, 'I', 0, 0], [0, 'I', 0, 0]], color: '0, 255, 255' }, // Cyan
-//   J: { shape: [[0, 'J', 0], [0, 'J', 0], ['J', 'J', 0]], color: '0, 0, 255' }, // Blue
-//   L: { shape: [[0, 'L', 0], [0, 'L', 0], [0, 'L', 'L']], color: '255, 165, 0' }, // Orange
-//   O: { shape: [['O', 'O'], ['O', 'O']], color: '255, 255, 0' }, // Yellow
-//   S: { shape: [[0, 'S', 'S'], ['S', 'S', 0], [0, 0, 0]], color: '0, 255, 0' }, // Green
-//   T: { shape: [[0, 'T', 0], ['T', 'T', 'T'], [0, 0, 0]], color: '128, 0, 128' }, // Purple
-//   Z: { shape: [['Z', 'Z', 0], [0, 'Z', 'Z'], [0, 0, 0]], color: '255, 0, 0' }, // Red
+// // 🎨 블록 색상 테마 (6가지)
+// const BLOCK_THEMES = {
+//   neon: {
+//     I: '0, 255, 255',      // Cyan
+//     J: '0, 0, 255',        // Blue
+//     L: '255, 165, 0',      // Orange
+//     O: '255, 255, 0',      // Yellow
+//     S: '0, 255, 0',        // Green
+//     T: '128, 0, 128',      // Purple
+//     Z: '255, 0, 0',        // Red
+//   },
+//   pastel: {
+//     I: '173, 216, 230',    // Light Blue
+//     J: '176, 196, 222',    // Light Steel Blue
+//     L: '255, 192, 203',    // Pink
+//     O: '255, 228, 181',    // Moccasin
+//     S: '152, 251, 152',    // Pale Green
+//     T: '221, 160, 221',    // Plum
+//     Z: '255, 182, 193',    // Light Pink
+//   },
+//   galaxy: {
+//     I: '138, 43, 226',     // Blue Violet
+//     J: '75, 0, 130',       // Indigo
+//     L: '255, 20, 147',     // Deep Pink
+//     O: '218, 112, 214',    // Orchid
+//     S: '186, 85, 211',     // Medium Orchid
+//     T: '147, 112, 219',    // Medium Purple
+//     Z: '238, 130, 238',    // Violet
+//   },
+//   ocean: {
+//     I: '0, 191, 255',      // Deep Sky Blue
+//     J: '30, 144, 255',     // Dodger Blue
+//     L: '64, 224, 208',     // Turquoise
+//     O: '72, 209, 204',     // Medium Turquoise
+//     S: '32, 178, 170',     // Light Sea Green
+//     T: '95, 158, 160',     // Cadet Blue
+//     Z: '0, 206, 209',      // Dark Turquoise
+//   },
+//   sunset: {
+//     I: '255, 99, 71',      // Tomato
+//     J: '255, 140, 0',      // Dark Orange
+//     L: '255, 69, 0',       // Orange Red
+//     O: '255, 215, 0',      // Gold
+//     S: '255, 160, 122',    // Light Salmon
+//     T: '255, 127, 80',     // Coral
+//     Z: '220, 20, 60',      // Crimson
+//   },
+//   forest: {
+//     I: '34, 139, 34',      // Forest Green
+//     J: '46, 125, 50',      // Dark Green
+//     L: '139, 195, 74',     // Light Green
+//     O: '205, 220, 57',     // Yellow Green
+//     S: '102, 187, 106',    // Medium Sea Green
+//     T: '76, 175, 80',      // Green
+//     Z: '156, 204, 101',    // Light Green
+//   }
 // };
+
+// const THEME_NAMES = Object.keys(BLOCK_THEMES);
+
+// // 🎨 테트로미노 기본 구조 생성 함수
+// const createTetrominos = (colorTheme) => ({
+//   0: { shape: [[0]], color: '0, 0, 0' },
+//   I: { shape: [[0, 'I', 0, 0], [0, 'I', 0, 0], [0, 'I', 0, 0], [0, 'I', 0, 0]], color: colorTheme.I },
+//   J: { shape: [[0, 'J', 0], [0, 'J', 0], ['J', 'J', 0]], color: colorTheme.J },
+//   L: { shape: [[0, 'L', 0], [0, 'L', 0], [0, 'L', 'L']], color: colorTheme.L },
+//   O: { shape: [['O', 'O'], ['O', 'O']], color: colorTheme.O },
+//   S: { shape: [[0, 'S', 'S'], ['S', 'S', 0], [0, 0, 0]], color: colorTheme.S },
+//   T: { shape: [[0, 'T', 0], ['T', 'T', 'T'], [0, 0, 0]], color: colorTheme.T },
+//   Z: { shape: [['Z', 'Z', 0], [0, 'Z', 'Z'], [0, 0, 0]], color: colorTheme.Z },
+// });
 
 // const RANDOM_TETROMINOS = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
 
 // // 💰 배당률
 // const PAYOUT_TABLE = {
 //     5000: 0.1,
-//     10000: 0.5,
-//     20000: 1.0,
-//     35000: 1.5,
-//     50000: 2.5,
-//     80000: 5.0
+//     100000: 0.5,
+//     200000: 1.0,
+//     350000: 1.5,
+//     500000: 2.0,
+//     1000000: 2.5
 // };
 
 // const STAGE_WIDTH = 10;
@@ -61,7 +121,7 @@
 //   );
 
 // // 🎒 7-bag 시스템: 7개 블록을 섞어서 반환
-// const generate7Bag = () => {
+// const generate7Bag = (TETROMINOS) => {
 //   const bag = [...RANDOM_TETROMINOS];
 //   // Fisher-Yates shuffle
 //   for (let i = bag.length - 1; i > 0; i--) {
@@ -87,6 +147,9 @@
 //   const navigate = useNavigate();
 //   const user = auth.currentUser;
 //   const { t } = useLanguage();
+
+//   // 🎨 현재 블록 색상 테마
+//   const [TETROMINOS, setTETROMINOS] = useState(createTetrominos(BLOCK_THEMES.neon));
 
 //   const [stage, setStage] = useState(createStage());
 //   const [player, setPlayer] = useState({ pos: { x: 0, y: 0 }, tetromino: TETROMINOS[0].shape, collided: false });
@@ -153,7 +216,7 @@
 //   const getNextPieceFromBag = () => {
 //       if (bagIndex >= currentBag.length) {
 //           // 현재 bag이 다 소진되면 새로운 bag 생성
-//           const newBag = generate7Bag();
+//           const newBag = generate7Bag(TETROMINOS);
 //           setCurrentBag(newBag);
 //           setBagIndex(1);
 //           return newBag[0];
@@ -177,6 +240,12 @@
 //             uid: user.uid, type: "게임", msg: `🧱 ${t.g_tetris_title || '테트리스'} ${t.gameStart || "시작"}`, amount: -bet, createdAt: serverTimestamp()
 //         });
 
+//         // 🎨 랜덤 블록 색상 테마 선택
+//         const randomThemeName = THEME_NAMES[Math.floor(Math.random() * THEME_NAMES.length)];
+//         const newColorTheme = BLOCK_THEMES[randomThemeName];
+//         const newTETROMINOS = createTetrominos(newColorTheme);
+//         setTETROMINOS(newTETROMINOS);
+
 //         // 리셋
 //         setStage(createStage());
 //         setScore(0);
@@ -189,8 +258,8 @@
 //         setDropTime(1000);
 //         setResultMessage("");
 
-//         // 🎒 7-bag 초기화
-//         const initialBag = generate7Bag();
+//         // 🎒 7-bag 초기화 (새 테마 적용)
+//         const initialBag = generate7Bag(newTETROMINOS);
 //         setCurrentBag(initialBag);
 //         setBagIndex(4); // 첫 4개를 사용 (현재 블록 + next 3개)
         
@@ -521,7 +590,7 @@
 //           100% { background: white; box-shadow: 0 0 40px rgba(255, 255, 255, 1), inset 0 0 40px rgba(255, 255, 255, 1); }
 //         }
 //       `}</style>
-//     <div className="container" style={{ background: 'linear-gradient(135deg, #1e1e2e, #2a2a3e)', minHeight: '100vh', padding: '10px 5px', display: 'flex', flexDirection: 'column', alignItems: 'center', userSelect: 'none', color:'white' }}>
+//     <div className="container" style={{ background: 'linear-gradient(135deg, #1e3c72, #2a5298)', minHeight: '100vh', padding: '10px 5px', display: 'flex', flexDirection: 'column', alignItems: 'center', userSelect: 'none', color:'white' }}>
       
 //       {/* 헤더 */}
 //       <div style={{width: '100%', maxWidth: '400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)', padding: '12px 20px', borderRadius: 15, border: '1px solid rgba(255,255,255,0.1)', boxShadow:'0 8px 20px rgba(0,0,0,0.3)'}}>
@@ -538,7 +607,7 @@
 //           <div style={{display:'flex', flexDirection:'column', gap: 10, width: '75px'}}>
 //               <div style={{background:'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(5px)', padding: '10px 5px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', textAlign:'center', height: '80px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
 //                   <div style={{fontSize:10, fontWeight:'bold', color:'#a29bfe', marginBottom:5, letterSpacing:'1px'}}>{t.g_hold || "HOLD"}</div>
-//                   {holdPiece ? <MiniBoard piece={holdPiece} /> : <div style={{fontSize:20, color:'#555'}}>-</div>}
+//                   {holdPiece ? <MiniBoard piece={holdPiece} TETROMINOS={TETROMINOS} /> : <div style={{fontSize:20, color:'#555'}}>-</div>}
 //               </div>
 //               <div style={{background:'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(5px)', padding: '10px 5px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)', textAlign:'center', flex:1, display:'flex', flexDirection:'column', justifyContent:'center'}}>
 //                   <div style={{fontSize:10, fontWeight:'bold', color:'#aaa'}}>{t.g_level || "LEVEL"}</div>
@@ -552,7 +621,7 @@
 //           {/* 메인 보드 */}
 //           <div style={{border: '2px solid rgba(255,255,255,0.1)', borderRadius: 10, width: STAGE_WIDTH * BLOCK_SIZE, height: STAGE_HEIGHT * BLOCK_SIZE, background: 'rgba(0, 0, 0, 0.6)', position: 'relative', boxShadow: '0 0 30px rgba(0,0,0,0.5)', overflow: 'visible'}}>
 //               <div style={{display: 'grid', gridTemplateRows: `repeat(${STAGE_HEIGHT}, ${BLOCK_SIZE}px)`, gridTemplateColumns: `repeat(${STAGE_WIDTH}, ${BLOCK_SIZE}px)`, width: STAGE_WIDTH * BLOCK_SIZE, height: STAGE_HEIGHT * BLOCK_SIZE, gap: 0, padding: 0, margin: 0}}>
-//                   {currentBoard.map((row, y) => row.map((cell, x) => <Cell key={`${y}-${x}`} type={cell.type} status={cell.status} />))}
+//                   {currentBoard.map((row, y) => row.map((cell, x) => <Cell key={`${y}-${x}`} type={cell.type} status={cell.status} TETROMINOS={TETROMINOS} />))}
 //               </div>
 //               {gameState !== 'playing' && (
 //                   <div style={{position:'absolute', top:0, left:0, width:'100%', height:'100%', background:'rgba(20, 20, 30, 0.9)', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', zIndex:10, backdropFilter: 'blur(5px)'}}>
@@ -604,22 +673,7 @@
 //           </div>
 //       </div>
 
-//       {/* 모바일 컨트롤 */}
-//       <div style={{marginTop: 25, width: '100%', maxWidth: '500px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap: 10}}>
-//           <div style={{gridColumn:'1/4', display:'flex', justifyContent:'space-between', marginBottom:5, gap: 10}}>
-//              <button onClick={hold} style={{flex:1, background:'rgba(155, 89, 182, 0.8)', border:'none', padding:'15px', borderRadius:12, color:'white', fontWeight:'bold', boxShadow:'0 4px 0 rgba(0,0,0,0.3)', backdropFilter:'blur(5px)'}}>{t.g_hold_btn || "HOLD"}</button>
-//              <button onClick={hardDrop} style={{flex:1, background:'rgba(231, 76, 60, 0.8)', border:'none', padding:'15px', borderRadius:12, color:'white', fontWeight:'bold', boxShadow:'0 4px 0 rgba(0,0,0,0.3)', backdropFilter:'blur(5px)'}}>{t.g_drop_btn || "DROP"}</button>
-//           </div>
-//           <button onClick={()=>handleMobileControl('L')} style={{background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', padding:20, borderRadius:12, color:'white', fontSize:24}}>⬅️</button>
-//           <div style={{display:'flex', flexDirection:'column', gap:10}}>
-//               <button onClick={()=>handleMobileControl('U')} style={{flex:1, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, color:'white', fontSize:24}}>🔃</button>
-//               <button onClick={()=>handleMobileControl('D')} style={{flex:1, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, color:'white', fontSize:24}}>⬇️</button>
-//           </div>
-//           <button onClick={()=>handleMobileControl('R')} style={{background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', padding:20, borderRadius:12, color:'white', fontSize:24}}>➡️</button>
-//           <button onClick={() => setGameState(prev => prev === 'playing' ? 'paused' : 'playing')} style={{gridColumn:'1/4', marginTop:5, background:'rgba(241, 196, 15, 0.8)', border:'none', padding:12, borderRadius:12, color:'white', fontWeight:'bold', boxShadow:'0 4px 0 rgba(0,0,0,0.3)'}}>
-//               {gameState === 'paused' ? (t.g_resume || "RESUME") : (t.g_paused_btn || "PAUSE")}
-//           </button>
-//       </div>
+
 
 //       {/* 랭킹 */}
 //       <div style={{width: '100%', maxWidth: '500px', marginTop: 25, background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 15, border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(5px)'}}>
@@ -639,7 +693,7 @@
 // }
 
 // // 🎨 렌더링 컴포넌트
-// const Cell = React.memo(({ type, status }) => {
+// const Cell = React.memo(({ type, status, TETROMINOS }) => {
 //     const color = (type !== 0 && TETROMINOS[type]) ? TETROMINOS[type].color : '0, 0, 0';
 //     const isFilled = type !== 0;
 //     const isGhost = status === 'ghost';
@@ -676,12 +730,12 @@
 //     return <div style={style} />;
 // });
 
-// const MiniBoard = ({ piece, pieceObj }) => {
+// const MiniBoard = ({ piece, pieceObj, TETROMINOS }) => {
 //     let shape, color;
 //     if (pieceObj && pieceObj.shape) {
 //         shape = pieceObj.shape;
 //         color = pieceObj.color;
-//     } else if (piece && TETROMINOS[piece]) {
+//     } else if (piece && TETROMINOS && TETROMINOS[piece]) {
 //         shape = TETROMINOS[piece].shape;
 //         color = TETROMINOS[piece].color;
 //     } else {
@@ -789,12 +843,12 @@ const RANDOM_TETROMINOS = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
 
 // 💰 배당률
 const PAYOUT_TABLE = {
-    5000: 0.1,
-    10000: 0.5,
-    20000: 1.0,
-    35000: 1.5,
-    50000: 2.5,
-    80000: 5.0
+    5000: 0.01,
+    100000: 0.1,
+    250000: 1.12,
+    500000: 1.5,
+    1000000: 1.75,
+    2500000:2
 };
 
 const STAGE_WIDTH = 10;
@@ -1038,8 +1092,17 @@ export default function GameTetris() {
 
   const drop = () => {
     if (rowsCleared > level * 10) {
-      setLevel(prev => prev + 1);
-      setDropTime(1000 / (level + 1) + 200);
+      const nextLevel = level + 1;
+      setLevel(nextLevel);
+      
+      // 🔥 [속도 조정] 레벨 30부터 확 빨라지지만, 반응 가능한 수준으로 조정
+      if (nextLevel >= 30) {
+          // 30레벨일 때 150ms -> 40레벨일 때 100ms -> 50레벨일 때 50ms (최소 50ms)
+          const fastSpeed = Math.max(50, 300 - (nextLevel * 5));
+          setDropTime(fastSpeed);
+      } else {
+          setDropTime(1000 / (nextLevel + 1) + 200);
+      }
     }
     if (!checkCollision(player, stage, { x: 0, y: 1 })) {
       setPlayer(prev => ({ ...prev, pos: { x: prev.pos.x, y: prev.pos.y + 1 } }));
@@ -1130,7 +1193,14 @@ export default function GameTetris() {
       };
       setPlayer(newPlayer);
       setCanHold(true);
-      setDropTime(1000 / level + 200);
+      
+      // 🔥 리셋 시에도 동일한 속도 로직 적용
+      if (level >= 30) {
+          setDropTime(Math.max(50, 300 - (level * 5)));
+      } else {
+          setDropTime(1000 / level + 200);
+      }
+
       if (checkCollision(newPlayer, stage, {x:0, y:0})) {
           setGameOver(true);
           setGameState('finished');
@@ -1168,9 +1238,10 @@ export default function GameTetris() {
       setCanHold(false);
   };
 
+  // 🔥 일시정지 상태면 타이머 null 전달 (일시정지 작동)
   useInterval(() => {
     drop();
-  }, dropTime);
+  }, gameState === 'playing' ? dropTime : null);
 
   useEffect(() => {
       const handleKeyDown = (e) => {
@@ -1179,6 +1250,16 @@ export default function GameTetris() {
           // ⛔ 라인 클리어 중에는 입력 무시
           if (clearingRows.length > 0) return;
           
+          // P 키로 일시정지 토글
+          if (e.keyCode === 80) {
+              setGameState(prev => {
+                  if (prev === 'playing') return 'paused';
+                  if (prev === 'paused') return 'playing';
+                  return prev;
+              });
+              return;
+          }
+
           if(gameState !== 'playing') return;
           if (e.keyCode === 37) movePlayer(-1);
           else if (e.keyCode === 39) movePlayer(1);
@@ -1186,7 +1267,6 @@ export default function GameTetris() {
           else if (e.keyCode === 38) playerRotate(1);
           else if (e.code === 'Space') hardDrop();
           else if (e.keyCode === 67 || e.shiftKey) hold();
-          else if (e.keyCode === 80) setGameState(prev => prev === 'playing' ? 'paused' : 'playing');
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
@@ -1381,22 +1461,7 @@ export default function GameTetris() {
           </div>
       </div>
 
-      {/* 모바일 컨트롤 */}
-      {/* <div style={{marginTop: 25, width: '100%', maxWidth: '500px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap: 10}}>
-          <div style={{gridColumn:'1/4', display:'flex', justifyContent:'space-between', marginBottom:5, gap: 10}}>
-             <button onClick={hold} style={{flex:1, background:'rgba(155, 89, 182, 0.8)', border:'none', padding:'15px', borderRadius:12, color:'white', fontWeight:'bold', boxShadow:'0 4px 0 rgba(0,0,0,0.3)', backdropFilter:'blur(5px)'}}>{t.g_hold_btn || "HOLD"}</button>
-             <button onClick={hardDrop} style={{flex:1, background:'rgba(231, 76, 60, 0.8)', border:'none', padding:'15px', borderRadius:12, color:'white', fontWeight:'bold', boxShadow:'0 4px 0 rgba(0,0,0,0.3)', backdropFilter:'blur(5px)'}}>{t.g_drop_btn || "DROP"}</button>
-          </div>
-          <button onClick={()=>handleMobileControl('L')} style={{background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', padding:20, borderRadius:12, color:'white', fontSize:24}}>⬅️</button>
-          <div style={{display:'flex', flexDirection:'column', gap:10}}>
-              <button onClick={()=>handleMobileControl('U')} style={{flex:1, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, color:'white', fontSize:24}}>🔃</button>
-              <button onClick={()=>handleMobileControl('D')} style={{flex:1, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, color:'white', fontSize:24}}>⬇️</button>
-          </div>
-          <button onClick={()=>handleMobileControl('R')} style={{background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.1)', padding:20, borderRadius:12, color:'white', fontSize:24}}>➡️</button>
-          <button onClick={() => setGameState(prev => prev === 'playing' ? 'paused' : 'playing')} style={{gridColumn:'1/4', marginTop:5, background:'rgba(241, 196, 15, 0.8)', border:'none', padding:12, borderRadius:12, color:'white', fontWeight:'bold', boxShadow:'0 4px 0 rgba(0,0,0,0.3)'}}>
-              {gameState === 'paused' ? (t.g_resume || "RESUME") : (t.g_paused_btn || "PAUSE")}
-          </button>
-      </div> */}
+
 
       {/* 랭킹 */}
       <div style={{width: '100%', maxWidth: '500px', marginTop: 25, background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 15, border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(5px)'}}>
@@ -1482,4 +1547,4 @@ const MiniBoard = ({ piece, pieceObj, TETROMINOS }) => {
             )))}
         </div>
     );
-};
+}

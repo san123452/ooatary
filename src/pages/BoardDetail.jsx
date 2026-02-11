@@ -16,10 +16,9 @@
 //   const [post, setPost] = useState(null);
 //   const [comments, setComments] = useState([]);
 //   const [newComment, setNewComment] = useState("");
-//   const [newCommentImage, setNewCommentImage] = useState(""); // 🔥 [추가] 댓글 이미지 URL 상태
+//   const [newCommentImage, setNewCommentImage] = useState(""); 
 //   const [replyTo, setReplyTo] = useState(null);
 
-//   // ⭐ 페이지 입장 시 스크롤 맨 위로
 //   useEffect(() => {
 //     window.scrollTo(0, 0);
 //   }, []);
@@ -67,10 +66,10 @@
 //   };
 
 //   const handleAddComment = async () => {
-//     if (!newComment.trim() && !newCommentImage.trim()) return; // 🔥 내용이나 이미지 둘 중 하나는 있어야 함
+//     if (!newComment.trim() && !newCommentImage.trim()) return; 
 //     if (!user) return alert("Login required");
 
-//     // 🔥 댓글 쓰기 밴 확인 로직
+//     // 🔥 댓글 밴 확인
 //     try {
 //         const userSnap = await getDoc(doc(db, "users", user.uid));
 //         if (userSnap.exists()) {
@@ -88,16 +87,28 @@
 //     }
     
 //     try {
+//         // 🔥 [수정] 댓글 작성 시 내 칭호와 색상도 같이 가져옴
 //         const userDocRef = doc(db, "users", user.uid);
 //         const userDocSnap = await getDoc(userDocRef);
+        
 //         let realName = "User";
-//         if (userDocSnap.exists()) realName = userDocSnap.data().name; 
+//         let userTitle = "";
+//         let userTitleColor = "";
+
+//         if (userDocSnap.exists()) {
+//             const userData = userDocSnap.data();
+//             realName = userData.name;
+//             userTitle = userData.userTitle || "";
+//             userTitleColor = userData.userTitleColor || "";
+//         }
 
 //         const commentData = {
 //             text: newComment, 
-//             imageUrl: newCommentImage.trim(), // 🔥 [추가] 이미지 URL 저장
+//             imageUrl: newCommentImage.trim(), 
 //             uid: user.uid, 
 //             authorName: realName, 
+//             authorTitle: userTitle,           // 🔥 칭호 저장
+//             authorTitleColor: userTitleColor, // 🔥 색상 저장
 //             likes: [], 
 //             createdAt: serverTimestamp(),
 //             parentId: replyTo ? replyTo.id : null 
@@ -126,7 +137,7 @@
 //         }
 
 //         setNewComment("");
-//         setNewCommentImage(""); // 🔥 초기화
+//         setNewCommentImage(""); 
 //         setReplyTo(null);
 //     } catch (e) { console.error(e); }
 //   };
@@ -196,7 +207,16 @@
 //             {post.title}
 //         </h2>
 //         <div style={{ fontSize: '13px', color: '#bdc3c7', marginBottom: '20px', borderBottom: '1px solid #555', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems:'center' }}>
-//           <span>✍️ {post.authorName}</span>
+//           <span>
+//               {/* 🔥 [수정] 글 작성자 칭호 표시 */}
+//               ✍️ 
+//               {post.authorTitle && (
+//                   <span style={{ color: post.authorTitleColor || '#e74c3c', fontWeight: 'bold', margin: '0 4px' }}>
+//                       [{post.authorTitle}]
+//                   </span>
+//               )}
+//               {post.authorName}
+//           </span>
 //           <div style={{display:'flex', gap: 10}}>
 //               <span>📅 {formatDate(post.createdAt)}</span>
 //           </div>
@@ -243,7 +263,6 @@
 //               </div>
 //           )}
 //           <div style={{display:'flex', flexDirection:'column', gap:5}}>
-//               {/* 🔥 [추가됨] 이미지 URL 입력 필드 */}
 //               <input 
 //                 value={newCommentImage} 
 //                 onChange={(e) => setNewCommentImage(e.target.value)} 
@@ -269,6 +288,17 @@
 //                 <div style={{ background: '#333', padding: '10px', borderRadius: '5px' }}>
 //                   <div style={{display:'flex', justifyContent:'space-between'}}>
 //                       <div style={{ fontSize: '12px', color: '#f1c40f', marginBottom: '3px' }}>
+//                         {/* 🔥 [수정] 댓글 작성자 칭호 표시 */}
+//                         {c.authorTitle && (
+//                             <span style={{ 
+//                                 border: `1px solid ${c.authorTitleColor || '#f1c40f'}`, 
+//                                 color: c.authorTitleColor || '#f1c40f', 
+//                                 padding: '0 4px', 
+//                                 borderRadius: '3px', fontSize: '10px', marginRight: '4px' 
+//                             }}>
+//                                 {c.authorTitle}
+//                             </span>
+//                         )}
 //                         {c.authorName} <span style={{ color: '#777', marginLeft: '5px' }}>{formatDate(c.createdAt)}</span>
 //                       </div>
 //                       {(isAdm || (user && user.uid === c.uid)) && (
@@ -276,14 +306,13 @@
 //                       )}
 //                   </div>
                   
-//                   {/* 🔥 [추가됨] 댓글 이미지 렌더링 */}
 //                   {c.imageUrl && (
 //                       <div style={{ marginTop: '5px', marginBottom: '5px' }}>
 //                           <img 
 //                             src={c.imageUrl} 
 //                             alt="comment-img" 
 //                             style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '5px', objectFit: 'contain' }} 
-//                             onError={(e) => e.target.style.display = 'none'} // 깨진 이미지 숨김
+//                             onError={(e) => e.target.style.display = 'none'} 
 //                           />
 //                       </div>
 //                   )}
@@ -302,14 +331,25 @@
 //                     <div key={reply.id} style={{ background: '#2c2c2c', padding: '10px', borderRadius: '5px', marginLeft: '30px', borderLeft: '3px solid #555' }}>
 //                         <div style={{display:'flex', justifyContent:'space-between'}}>
 //                             <div style={{ fontSize: '12px', color: '#3498db', marginBottom: '3px' }}>
-//                                 ↳ {reply.authorName} <span style={{ color: '#777', marginLeft: '5px' }}>{formatDate(reply.createdAt)}</span>
+//                                 {/* 🔥 [수정] 대댓글 작성자 칭호 표시 */}
+//                                 ↳ 
+//                                 {reply.authorTitle && (
+//                                     <span style={{ 
+//                                         border: `1px solid ${reply.authorTitleColor || '#3498db'}`, 
+//                                         color: reply.authorTitleColor || '#3498db', 
+//                                         padding: '0 4px', 
+//                                         borderRadius: '3px', fontSize: '10px', margin: '0 4px' 
+//                                     }}>
+//                                         {reply.authorTitle}
+//                                     </span>
+//                                 )}
+//                                 {reply.authorName} <span style={{ color: '#777', marginLeft: '5px' }}>{formatDate(reply.createdAt)}</span>
 //                             </div>
 //                             {(isAdm || (user && user.uid === reply.uid)) && (
 //                                 <button onClick={() => handleDeleteComment(reply.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>❌</button>
 //                             )}
 //                         </div>
 
-//                         {/* 🔥 [추가됨] 대댓글 이미지 렌더링 */}
 //                         {reply.imageUrl && (
 //                             <div style={{ marginTop: '5px', marginBottom: '5px' }}>
 //                                 <img 
@@ -339,12 +379,12 @@
 //     </div>
 //   );
 // }
-
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
 import { doc, getDoc, deleteDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../LanguageContext';
+import { InstagramEmbed } from 'react-social-media-embed';
 
 const ADMIN_EMAIL = "kks3172@naver.com";
 
@@ -410,7 +450,6 @@ export default function BoardDetail() {
     if (!newComment.trim() && !newCommentImage.trim()) return; 
     if (!user) return alert("Login required");
 
-    // 🔥 댓글 밴 확인
     try {
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
@@ -422,13 +461,9 @@ export default function BoardDetail() {
                 }
             }
         }
-    } catch (e) {
-        console.error("Ban check error", e);
-        return;
-    }
+    } catch (e) { console.error("Ban check error", e); return; }
     
     try {
-        // 🔥 [수정] 댓글 작성 시 내 칭호와 색상도 같이 가져옴
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         
@@ -448,8 +483,8 @@ export default function BoardDetail() {
             imageUrl: newCommentImage.trim(), 
             uid: user.uid, 
             authorName: realName, 
-            authorTitle: userTitle,           // 🔥 칭호 저장
-            authorTitleColor: userTitleColor, // 🔥 색상 저장
+            authorTitle: userTitle, 
+            authorTitleColor: userTitleColor,
             likes: [], 
             createdAt: serverTimestamp(),
             parentId: replyTo ? replyTo.id : null 
@@ -459,11 +494,7 @@ export default function BoardDetail() {
         await updateDoc(doc(db, "posts", id), { commentCount: increment(1) });
 
         let receiverUid = null;
-        if (replyTo) {
-            receiverUid = replyTo.uid;
-        } else {
-            receiverUid = post.uid;
-        }
+        if (replyTo) { receiverUid = replyTo.uid; } else { receiverUid = post.uid; }
 
         if (receiverUid && receiverUid !== user.uid) {
             await addDoc(collection(db, "notifications"), {
@@ -549,7 +580,6 @@ export default function BoardDetail() {
         </h2>
         <div style={{ fontSize: '13px', color: '#bdc3c7', marginBottom: '20px', borderBottom: '1px solid #555', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems:'center' }}>
           <span>
-              {/* 🔥 [수정] 글 작성자 칭호 표시 */}
               ✍️ 
               {post.authorTitle && (
                   <span style={{ color: post.authorTitleColor || '#e74c3c', fontWeight: 'bold', margin: '0 4px' }}>
@@ -563,6 +593,14 @@ export default function BoardDetail() {
           </div>
         </div>
 
+        {/* 인스타그램 */}
+        {post.instagramUrl && (
+            <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'center' }}>
+                <InstagramEmbed url={post.instagramUrl} width={328} />
+            </div>
+        )}
+
+        {/* 유튜브 or 이미지 */}
         {youtubeId ? (
             <div style={{ marginBottom: 20, textAlign: 'center' }}>
                 <iframe width="100%" height="315" src={`https://www.youtube.com/embed/${youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ borderRadius: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}></iframe>
@@ -629,7 +667,6 @@ export default function BoardDetail() {
                 <div style={{ background: '#333', padding: '10px', borderRadius: '5px' }}>
                   <div style={{display:'flex', justifyContent:'space-between'}}>
                       <div style={{ fontSize: '12px', color: '#f1c40f', marginBottom: '3px' }}>
-                        {/* 🔥 [수정] 댓글 작성자 칭호 표시 */}
                         {c.authorTitle && (
                             <span style={{ 
                                 border: `1px solid ${c.authorTitleColor || '#f1c40f'}`, 
@@ -672,7 +709,6 @@ export default function BoardDetail() {
                     <div key={reply.id} style={{ background: '#2c2c2c', padding: '10px', borderRadius: '5px', marginLeft: '30px', borderLeft: '3px solid #555' }}>
                         <div style={{display:'flex', justifyContent:'space-between'}}>
                             <div style={{ fontSize: '12px', color: '#3498db', marginBottom: '3px' }}>
-                                {/* 🔥 [수정] 대댓글 작성자 칭호 표시 */}
                                 ↳ 
                                 {reply.authorTitle && (
                                     <span style={{ 
