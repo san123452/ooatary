@@ -2,7 +2,7 @@
 
 // import React, { useEffect, useState } from 'react';
 // import { db, auth } from '../firebase';
-// import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+// import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, limit, onSnapshot, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
 // import { useNavigate } from 'react-router-dom';
 // import { onAuthStateChanged, signOut } from 'firebase/auth';
 // import { useLanguage } from '../LanguageContext';
@@ -23,7 +23,11 @@
 //   const [notice, setNotice] = useState("");
 
 //   const navigate = useNavigate();
-//   const { t } = useLanguage();
+//   const { t, lang } = useLanguage();
+
+//   const OVERDUE_RATE = 0.1; // 10% 이자
+
+//   let isDebtProcessing = false;
 
 //   const renderName = (name, title, color) => {
 //     return (
@@ -45,7 +49,7 @@
         
 //         const userRef = doc(db, "users", user.uid);
 
-//         const unsubUser = onSnapshot(userRef, (docSnap) => {
+//         const unsubUser = onSnapshot(userRef, async (docSnap) => {
 //             if (docSnap.exists()) {
 //                 const data = docSnap.data();
 //                 setMyPoint(data.point || 0);
@@ -54,6 +58,48 @@
 //                 setMyName(data.name || "익명");
 //                 setMyTitle(data.userTitle || ""); 
 //                 setMyTitleColor(data.userTitleColor || ""); 
+
+//                 const currentDebt = data.debt || 0;
+//                 const currentPoint = data.point || 0;
+//                 const lastCheck = data.lastInterestDate ? data.lastInterestDate.toDate() : null;
+
+//                 if (currentDebt > 0 && !isDebtProcessing) {
+//                     const now = new Date();
+//                     const resetTime = new Date();
+//                     resetTime.setHours(0, 0, 0, 0); 
+
+//                     if (now >= resetTime && (!lastCheck || lastCheck < resetTime)) {
+//                         isDebtProcessing = true; 
+
+//                         const interest = Math.floor(currentDebt * OVERDUE_RATE);
+//                         let totalDebtWithInterest = currentDebt + interest;
+//                         let stealAmount = Math.min(currentPoint, totalDebtWithInterest);
+
+//                         try {
+//                             await updateDoc(userRef, {
+//                                 debt: Math.max(0, totalDebtWithInterest - stealAmount),
+//                                 point: Math.max(0, currentPoint - stealAmount), 
+//                                 lastInterestDate: serverTimestamp() 
+//                             });
+
+//                             const msgKo = `[00:00 정산] 연체료 10%(${interest.toLocaleString()}P) 추가 및 ${stealAmount.toLocaleString()}P 강제 징수`;
+//                             const msgJp = `[00:00 精算] 延滞料 10%(${interest.toLocaleString()}P) 追加および ${stealAmount.toLocaleString()}P 強制徴収`;
+
+//                             await addDoc(collection(db, "history"), {
+//                                 uid: user.uid,
+//                                 type: lang === 'jp' ? "強制徴収" : "강제징수",
+//                                 msg: lang === 'jp' ? msgJp : msgKo,
+//                                 amount: -stealAmount,
+//                                 createdAt: serverTimestamp()
+//                             });
+
+//                             alert(lang === 'jp' ? msgJp : msgKo);
+//                         } catch(e) {
+//                             console.error("징수 실패:", e);
+//                         }
+//                     }
+//                 }
+
 //             } else {
 //                 setDoc(userRef, { email: user.email, name: "익명", point: 30000, tierLevel: 0, tierName: "언랭크" }, { merge: true });
 //             }
@@ -82,7 +128,8 @@
 //                 return b.point - a.point;
 //             });
 
-//             setRankers(fetchedUsers.slice(0, 10));
+//             // ⭐️ 기존 slice(0, 10)에서 (0, 5)로 수정
+//             setRankers(fetchedUsers.slice(0, 5));
 //         } catch (e) { console.error("Ranking Error:", e); }
 
 //         try {
@@ -106,7 +153,7 @@
 //       }
 //     });
 //     return () => unsubscribeAuth();
-//   }, [navigate]);
+//   }, [navigate, lang]);
 
 //   if (loading) return <div style={{ background: '#2c3e50', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff' }}><h2>Loading...</h2></div>;
 
@@ -160,7 +207,8 @@
 //         )}
 
 //         <div className="card" style={{ background: '#222', border: '2px solid #f1c40f', marginBottom: 10, borderRadius: '10px', overflow:'hidden' }}>
-//           <div style={{ textAlign: 'center', background: '#2c3e50', padding: '10px', color: '#f1c40f', fontWeight: 'bold', fontSize: '16px', borderBottom: '1px solid #444' }}>{t.rank} TOP 10</div>
+//           {/* ⭐️ 제목 텍스트도 TOP 5로 수정 */}
+//           <div style={{ textAlign: 'center', background: '#2c3e50', padding: '10px', color: '#f1c40f', fontWeight: 'bold', fontSize: '16px', borderBottom: '1px solid #444' }}>{t.rank} TOP 5</div>
 
 //           <div style={{ display: 'flex', flexDirection: 'column', padding: '5px' }}>
 //             {rankers.map((user, idx) => (
@@ -202,7 +250,6 @@
 //             </div>
 //         )}
 
-//         {/* 🔥 GAME ZONE */}
 //         <div className="card" style={{
 //           background: '#34495e',
 //           border: '2px solid #f1c40f',
@@ -220,63 +267,26 @@
 //           </div>
 
 //           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: 15 }}>
-            
-//             {/* 🔥 [수정] PVP 버튼 (크기 반으로 줄임) */}
-//             <button className="btn" style={{ 
-//                 background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', 
-//                 padding: '20px', 
-//                 borderRadius: '10px', 
-//                 fontSize: '18px', 
-//                 fontWeight:'bold', 
-//                 border: '1px solid rgba(255,255,255,0.2)', 
-//                 color:'white', 
-//                 cursor:'pointer' 
-//             }} onClick={() => navigate('/gamelobby')}>
-//                 {t.pvp}
-//             </button>
-
-//             {/* 🔥 [추가] TFT 전적 버튼 (PVP 옆에 배치) */}
-//             <button className="btn" style={{ 
-//                 background: 'linear-gradient(135deg, #11b288 0%, #1e272e 100%)', 
-//                 padding: '20px', 
-//                 borderRadius: '10px', 
-//                 fontSize: '18px', 
-//                 fontWeight:'bold', 
-//                 border: '1px solid #11b288', 
-//                 color:'white', 
-//                 cursor:'pointer' 
-//             }} onClick={() => navigate('/board')}>
-//                {t.cafe}
-//             </button>
-// {/* 
-//             <button className="btn" style={{ background: '#b6cf26', padding: '15px',
-//                borderRadius: '10px', fontSize: '16px', gridColumn: 'span 2',
-//                 fontWeight:'bold', border:'none', color:'#2c3e50', 
-//                 cursor:'pointer' }} onClick={() => navigate('/board')}>{t.cafe}</button>
-//              */}
+//             <button className="btn" style={{ background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', padding: '20px', borderRadius: '10px', fontSize: '18px', fontWeight:'bold', border: '1px solid rgba(255,255,255,0.2)', color:'white', cursor:'pointer' }} onClick={() => navigate('/gamelobby')}> {t.pvp} </button>
+//             <button className="btn" style={{ background: 'linear-gradient(135deg, #11b288 0%, #1e272e 100%)', padding: '20px', borderRadius: '10px', fontSize: '18px', fontWeight:'bold', border: '1px solid #11b288', color:'white', cursor:'pointer' }} onClick={() => navigate('/board')}> {t.cafe} </button>
 //             <div style={{ gridColumn: 'span 2', height: '1px', background: '#555', margin: '10px 0' }} />
-            
-//             {/* 아케이드 게임 */}
+//             <GameBtn title="🕹️ ApiGame" color="linear-gradient(135deg, #ff0080 0%, #ff8c00 100%)" onClick={() => navigate('/api-game')} isNew={true} /> 
 //             <GameBtn title={t.highway || "Highway"} color="linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)" onClick={() => navigate('/coinpusher')} isNew={true} />
 //             <GameBtn title={t.stack || "Stack"} color="linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)" onClick={() => navigate('/stack')} isNew={true} />
-            
-//             {/* 퍼즐 게임 */}
 //             <GameBtn title={t.g_2048_title || "2048"} color="#bbada0" onClick={() => navigate('/game2048')} />
 //             <GameBtn title={t.g_suika_title || "수박게임"} color="#4CAF50" onClick={() => navigate('/suika')} isNew={true} />
-            
 //             <GameBtn title={t.apple} color="#e74c3c" onClick={() => navigate('/apple-single')} />
 //             <GameBtn title={t.ostrich} color="#ff6b6b" onClick={() => navigate('/ostrich')} />
-
-//             {/* 베팅 게임 */}
 //             <GameBtn title={t.oddEven} color="#e74c3c" onClick={() => navigate('/game')} />
 //             <GameBtn title={t.slot} color="#8e44ad" onClick={() => navigate('/slot')} />
 //             <GameBtn title={t.rps} color="#2980b9" onClick={() => navigate('/rps')} />
 //             <GameBtn title={t.blackjack} color="#d35400" onClick={() => navigate('/blackjack')} />
 //             <GameBtn title={t.angelDemon} color="#f39c12" onClick={() => navigate('/roulette')} />
-//             <GameBtn title={t.mines} color="#16a085" onClick={() => navigate('/mines')} />
 //             <GameBtn title={t.graph} color="#9b59b6" onClick={() => navigate('/crash')} />
 //             <GameBtn title={t.highlow} color="#2c3e50" border="#7f8c8d" onClick={() => navigate('/highlow')} />
 //             <GameBtn title={t.g_tetris_title || "🧱 테트리스"} color="#9b59b6" onClick={() => navigate('/tetris')} isNew={true} />
+//             <GameBtn title="⚡ BitCoin 100x" color="linear-gradient(45deg, #f7931a, #e67e22)" onClick={() => navigate('/bitcoin')} isNew={true} />
+//             <GameBtn title={t.loan_title || "💸 강산와머니"} color="#2c3e50" border="#f39c12" onClick={() => navigate('/loan')} isNew={true} />
 //           </div>
 //         </div>
 
@@ -294,33 +304,22 @@
 //   );
 // }
 
-// // 버튼 컴포넌트
 // function GameBtn({ title, color, onClick, border, isNew }) {
 //     return (
 //         <button onClick={onClick} style={{ 
-//             background: color, 
-//             padding: '15px 5px', 
-//             borderRadius: '8px', 
-//             color: 'white', 
-//             border: border ? `1px solid ${border}` : 'none', 
-//             cursor: 'pointer', 
-//             fontWeight: 'bold', 
-//             fontSize: '14px', 
-//             width: '100%', 
-//             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-//             position: 'relative'
+//             background: color, padding: '15px 5px', borderRadius: '8px', color: 'white', 
+//             border: border ? `1px solid ${border}` : 'none', cursor: 'pointer', fontWeight: 'bold', 
+//             fontSize: '14px', width: '100%', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', position: 'relative'
 //         }}>
 //             {title}
-//             {isNew && (
-//                 <span style={{ position: 'absolute', top: -5, right: -5, fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', fontWeight:'bold', boxShadow:'0 2px 4px rgba(0,0,0,0.3)' }}>N</span>
-//             )}
+//             {isNew && <span style={{ position: 'absolute', top: -5, right: -5, fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', fontWeight:'bold', boxShadow:'0 2px 4px rgba(0,0,0,0.3)' }}>N</span>}
 //         </button>
 //     );
 // }
 
 import React, { useEffect, useState } from 'react';
 import { db, auth } from '../firebase';
-import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, limit, onSnapshot, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useLanguage } from '../LanguageContext';
@@ -341,7 +340,7 @@ export default function Home() {
   const [notice, setNotice] = useState("");
 
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const renderName = (name, title, color) => {
     return (
@@ -363,7 +362,7 @@ export default function Home() {
         
         const userRef = doc(db, "users", user.uid);
 
-        const unsubUser = onSnapshot(userRef, (docSnap) => {
+        const unsubUser = onSnapshot(userRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setMyPoint(data.point || 0);
@@ -372,6 +371,7 @@ export default function Home() {
                 setMyName(data.name || "익명");
                 setMyTitle(data.userTitle || ""); 
                 setMyTitleColor(data.userTitleColor || ""); 
+                // 🔥 [삭제됨] 강제 징수 및 00시 정산 로직이 제거되었습니다.
             } else {
                 setDoc(userRef, { email: user.email, name: "익명", point: 30000, tierLevel: 0, tierName: "언랭크" }, { merge: true });
             }
@@ -400,7 +400,8 @@ export default function Home() {
                 return b.point - a.point;
             });
 
-            setRankers(fetchedUsers.slice(0, 10));
+            // ⭐️ 랭킹 5등까지만 유지
+            setRankers(fetchedUsers.slice(0, 5));
         } catch (e) { console.error("Ranking Error:", e); }
 
         try {
@@ -424,7 +425,7 @@ export default function Home() {
       }
     });
     return () => unsubscribeAuth();
-  }, [navigate]);
+  }, [navigate, lang]);
 
   if (loading) return <div style={{ background: '#2c3e50', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff' }}><h2>Loading...</h2></div>;
 
@@ -439,12 +440,7 @@ export default function Home() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div style={{ width: 50, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '50%' }}>
-              <img
-                src={`/tiers/${myTierLevel}.png`}
-                alt={myTierName}
-                style={{ width: '80%', height: '80%', objectFit: 'contain' }}
-                onError={e => e.target.style.display = 'none'}
-              />
+              <img src={`/tiers/${myTierLevel}.png`} alt={myTierName} style={{ width: '80%', height: '80%', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
             </div>
             <div>
               <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: 2 }}>
@@ -457,18 +453,8 @@ export default function Home() {
           <button className="btn" style={{ background: '#e74c3c', fontSize: '12px', padding: '8px 12px', borderRadius: '6px', border:'none', color:'white', cursor:'pointer' }} onClick={() => signOut(auth)}>{t.logout}</button>
         </div>
 
-        <button className="card" style={{
-          width: '100%',
-          background: 'linear-gradient(90deg, #8e44ad, #c0392b)',
-          border: '2px solid #f1c40f',
-          borderRadius: '10px',
-          marginBottom: 20, padding: 15, cursor: 'pointer',
-          boxShadow: '0 4px 10px rgba(241, 196, 15, 0.2)',
-          display: 'flex', alignItems:'center', justifyContent:'center'
-        }} onClick={() => navigate('/shop')}>
-          <div style={{ textAlign: 'center', color: 'white', fontSize: '18px', fontWeight: 'bold' }}>
-            {t.shop}
-          </div>
+        <button className="card" style={{ width: '100%', background: 'linear-gradient(90deg, #8e44ad, #c0392b)', border: '2px solid #f1c40f', borderRadius: '10px', marginBottom: 20, padding: 15, cursor: 'pointer', boxShadow: '0 4px 10px rgba(241, 196, 15, 0.2)', display: 'flex', alignItems:'center', justifyContent:'center' }} onClick={() => navigate('/shop')}>
+          <div style={{ textAlign: 'center', color: 'white', fontSize: '18px', fontWeight: 'bold' }}> {t.shop} </div>
         </button>
 
         {notice && (
@@ -478,22 +464,14 @@ export default function Home() {
         )}
 
         <div className="card" style={{ background: '#222', border: '2px solid #f1c40f', marginBottom: 10, borderRadius: '10px', overflow:'hidden' }}>
-          <div style={{ textAlign: 'center', background: '#2c3e50', padding: '10px', color: '#f1c40f', fontWeight: 'bold', fontSize: '16px', borderBottom: '1px solid #444' }}>{t.rank} TOP 10</div>
-
+          <div style={{ textAlign: 'center', background: '#2c3e50', padding: '10px', color: '#f1c40f', fontWeight: 'bold', fontSize: '16px', borderBottom: '1px solid #444' }}>{t.rank} TOP 5</div>
           <div style={{ display: 'flex', flexDirection: 'column', padding: '5px' }}>
             {rankers.map((user, idx) => (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', borderBottom: idx !== rankers.length - 1 ? '1px solid #333' : 'none', background: idx === 0 ? 'rgba(241, 196, 15, 0.1)' : 'transparent' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ width: '20px', textAlign: 'center', color: idx < 3 ? '#f1c40f' : '#7f8c8d', fontWeight: 'bold', fontSize:'14px' }}>{idx + 1}</span>
-                  <img
-                    src={`/tiers/${user.tierLevel}.png`}
-                    alt={user.tierName}
-                    style={{ width: '25px', height: '25px', objectFit: 'contain' }}
-                    onError={e => e.target.style.display = 'none'}
-                  />
-                  <span style={{ fontSize: '14px', fontWeight: idx===0?'bold':'normal' }}>
-                      {renderName(user.name, user.userTitle, user.userTitleColor)}
-                  </span>
+                  <img src={`/tiers/${user.tierLevel}.png`} alt={user.tierName} style={{ width: '25px', height: '25px', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+                  <span style={{ fontSize: '14px', fontWeight: idx===0?'bold':'normal' }}> {renderName(user.name, user.userTitle, user.userTitleColor)} </span>
                 </div>
                 <span style={{ color: '#f1c40f', fontSize: '14px', fontWeight: 'bold' }}>{Math.floor(user.point).toLocaleString()}</span>
               </div>
@@ -504,132 +482,49 @@ export default function Home() {
           </div>
         </div>
 
-        {reportRankers.length > 0 && (
-            <div className="card" style={{ background: '#c0392b', border: '1px solid #e74c3c', marginBottom: 20, borderRadius: '10px', overflow:'hidden' }}>
-                <div style={{ textAlign: 'center', padding: '8px', color: 'white', fontWeight: 'bold', fontSize: '14px', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-                    🚨 {t.ad_report_rank || "불량 이용자 (신고 TOP 3)"}
-                </div>
-                <div style={{ padding: '5px 10px' }}>
-                    {reportRankers.map((u, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', borderBottom: i < reportRankers.length-1 ? '1px solid rgba(255,255,255,0.1)' : 'none', color: 'white' }}>
-                            <span>{i+1}. <strong>{renderName(u.name, u.userTitle, u.userTitleColor)}</strong></span>
-                            <span style={{fontWeight:'bold', color:'#f1c40f'}}>{u.count}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        {/* 🔥 GAME ZONE */}
-        <div className="card" style={{
-          background: '#34495e',
-          border: '2px solid #f1c40f',
-          marginBottom: 20, padding: '20px',
-          borderRadius: '10px',
-          position: 'relative',
-          marginTop: '30px'
-        }}>
-          <div style={{
-            position: 'absolute', top: -14, left: 20, background: '#2c3e50', padding: '0 15px',
-            color: '#f1c40f', fontWeight: 'bold', fontSize: '18px',
-            border: '2px solid #f1c40f', borderRadius: '20px'
-          }}>
-            {t.gameZone}
-          </div>
-
+        {/* 하단 게임존 및 관리자 패널 생략 없이 유지 */}
+        <div className="card" style={{ background: '#34495e', border: '2px solid #f1c40f', marginBottom: 20, padding: '20px', borderRadius: '10px', position: 'relative', marginTop: '30px' }}>
+          <div style={{ position: 'absolute', top: -14, left: 20, background: '#2c3e50', padding: '0 15px', color: '#f1c40f', fontWeight: 'bold', fontSize: '18px', border: '2px solid #f1c40f', borderRadius: '20px' }}> {t.gameZone} </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: 15 }}>
-            
-            {/* 🔥 [수정] PVP 버튼 (크기 반으로 줄임) */}
-            <button className="btn" style={{ 
-                background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', 
-                padding: '20px', 
-                borderRadius: '10px', 
-                fontSize: '18px', 
-                fontWeight:'bold', 
-                border: '1px solid rgba(255,255,255,0.2)', 
-                color:'white', 
-                cursor:'pointer' 
-            }} onClick={() => navigate('/gamelobby')}>
-                {t.pvp}
-            </button>
-
-            {/* 🔥 [추가] TFT 전적 버튼 (PVP 옆에 배치) */}
-            <button className="btn" style={{ 
-                background: 'linear-gradient(135deg, #11b288 0%, #1e272e 100%)', 
-                padding: '20px', 
-                borderRadius: '10px', 
-                fontSize: '18px', 
-                fontWeight:'bold', 
-                border: '1px solid #11b288', 
-                color:'white', 
-                cursor:'pointer' 
-            }} onClick={() => navigate('/board')}>
-               {t.cafe}
-            </button>
-
+            <button className="btn" style={{ background: 'linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)', padding: '20px', borderRadius: '10px', fontSize: '18px', fontWeight:'bold', color:'white', cursor:'pointer' }} onClick={() => navigate('/gamelobby')}> {t.pvp} </button>
+            <button className="btn" style={{ background: 'linear-gradient(135deg, #11b288 0%, #1e272e 100%)', padding: '20px', borderRadius: '10px', fontSize: '18px', fontWeight:'bold', color:'white', cursor:'pointer' }} onClick={() => navigate('/board')}> {t.cafe} </button>
             <div style={{ gridColumn: 'span 2', height: '1px', background: '#555', margin: '10px 0' }} />
-            
-            {/* 아케이드 게임 */}
+            <GameBtn title="🕹️ ApiGame" color="linear-gradient(135deg, #ff0080 0%, #ff8c00 100%)" onClick={() => navigate('/api-game')} isNew={true} /> 
             <GameBtn title={t.highway || "Highway"} color="linear-gradient(135deg, #f1c40f 0%, #f39c12 100%)" onClick={() => navigate('/coinpusher')} isNew={true} />
             <GameBtn title={t.stack || "Stack"} color="linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)" onClick={() => navigate('/stack')} isNew={true} />
-            
-            {/* 퍼즐 게임 */}
             <GameBtn title={t.g_2048_title || "2048"} color="#bbada0" onClick={() => navigate('/game2048')} />
             <GameBtn title={t.g_suika_title || "수박게임"} color="#4CAF50" onClick={() => navigate('/suika')} isNew={true} />
-            
             <GameBtn title={t.apple} color="#e74c3c" onClick={() => navigate('/apple-single')} />
             <GameBtn title={t.ostrich} color="#ff6b6b" onClick={() => navigate('/ostrich')} />
-
-            {/* 베팅 게임 */}
             <GameBtn title={t.oddEven} color="#e74c3c" onClick={() => navigate('/game')} />
             <GameBtn title={t.slot} color="#8e44ad" onClick={() => navigate('/slot')} />
             <GameBtn title={t.rps} color="#2980b9" onClick={() => navigate('/rps')} />
             <GameBtn title={t.blackjack} color="#d35400" onClick={() => navigate('/blackjack')} />
             <GameBtn title={t.angelDemon} color="#f39c12" onClick={() => navigate('/roulette')} />
-            <GameBtn title={t.mines} color="#16a085" onClick={() => navigate('/mines')} />
             <GameBtn title={t.graph} color="#9b59b6" onClick={() => navigate('/crash')} />
             <GameBtn title={t.highlow} color="#2c3e50" border="#7f8c8d" onClick={() => navigate('/highlow')} />
             <GameBtn title={t.g_tetris_title || "🧱 테트리스"} color="#9b59b6" onClick={() => navigate('/tetris')} isNew={true} />
-            
-            {/* 🔥 비트코인 게임 버튼 추가 */}
-            <GameBtn title="⚡ BitCoin 50x" color="linear-gradient(45deg, #f7931a, #e67e22)" onClick={() => navigate('/bitcoin')} isNew={true} />
+            <GameBtn title="⚡ BitCoin 100x" color="linear-gradient(45deg, #f7931a, #e67e22)" onClick={() => navigate('/bitcoin')} isNew={true} />
+            <GameBtn title={t.loan_title || "💸 강산와머니"} color="#2c3e50" border="#f39c12" onClick={() => navigate('/loan')} isNew={true} />
           </div>
         </div>
 
         {isAdmin && (
           <div className="card" style={{ background: '#2c3e50', border: '2px dashed #f1c40f', marginBottom: 20, padding: 15, borderRadius:'10px' }}>
             <div style={{ marginBottom: 10, textAlign: 'center', color: '#f1c40f', fontWeight: 'bold' }}>{t.adminOnly}</div>
-            <div className="flex-row">
-              <button className="btn" style={{ width: '100%', background: '#333', border: '1px solid #555', padding:'10px', color:'white', cursor:'pointer', borderRadius:'6px' }} onClick={() => navigate('/admin')}>{t.adminPage}</button>
-            </div>
+            <button className="btn" style={{ width: '100%', background: '#333', border: '1px solid #555', padding:'10px', color:'white', cursor:'pointer', borderRadius:'6px' }} onClick={() => navigate('/admin')}>{t.adminPage}</button>
           </div>
         )}
-
       </div>
     </div>
   );
 }
 
-// 버튼 컴포넌트
 function GameBtn({ title, color, onClick, border, isNew }) {
     return (
-        <button onClick={onClick} style={{ 
-            background: color, 
-            padding: '15px 5px', 
-            borderRadius: '8px', 
-            color: 'white', 
-            border: border ? `1px solid ${border}` : 'none', 
-            cursor: 'pointer', 
-            fontWeight: 'bold', 
-            fontSize: '14px', 
-            width: '100%', 
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            position: 'relative'
-        }}>
+        <button onClick={onClick} style={{ background: color, padding: '15px 5px', borderRadius: '8px', color: 'white', border: border ? `1px solid ${border}` : 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', width: '100%', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', position: 'relative' }}>
             {title}
-            {isNew && (
-                <span style={{ position: 'absolute', top: -5, right: -5, fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', fontWeight:'bold', boxShadow:'0 2px 4px rgba(0,0,0,0.3)' }}>N</span>
-            )}
+            {isNew && <span style={{ position: 'absolute', top: -5, right: -5, fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', fontWeight:'bold' }}>N</span>}
         </button>
     );
 }
